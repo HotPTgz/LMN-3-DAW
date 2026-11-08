@@ -28,9 +28,14 @@ DrumSamplerViewModel::DrumSamplerViewModel(
 }
 
 void DrumSamplerViewModel::rebuildSampleFilesFromPlugin() {
+    // Read the SOUND entries from the plugin state rather than using
+    // getSoundFile(), which relies on a sound list that the plugin rebuilds
+    // asynchronously.
     drumSampleFiles.clear();
-    for (int i = 0; i < samplerPlugin->getNumSounds(); i++)
-        drumSampleFiles.add(samplerPlugin->getSoundFile(i).getFile());
+    for (auto child : samplerPlugin->state)
+        if (child.hasType(tracktion::IDs::SOUND))
+            drumSampleFiles.add(tracktion::SourceFileReference::findFileFromString(
+                samplerPlugin->edit, child[tracktion::IDs::source].toString()));
 }
 
 juce::StringArray DrumSamplerViewModel::getItemNames() { return drumKitNames; }
@@ -69,10 +74,14 @@ void DrumSamplerViewModel::valueTreePropertyChanged(
 void DrumSamplerViewModel::readMappingFileIntoSampler(
     const juce::File &mappingFile, bool shouldUpdateSounds) {
     drumSampleFiles.clear();
-    // Remove from the end: removing by ascending index while the count
-    // shrinks only removed every other sound, leaving stale sounds behind.
-    while (samplerPlugin->getNumSounds() > 0)
-        samplerPlugin->removeSound(samplerPlugin->getNumSounds() - 1);
+    // Remove every SOUND child directly. SamplerPlugin::removeSound(i)
+    // removes the i-th child of the plugin state rather than the i-th sound,
+    // so it would also delete this view's state (which is stored as a child
+    // of the plugin state), and the old ascending loop only removed every
+    // other sound.
+    for (int i = samplerPlugin->state.getNumChildren() - 1; i >= 0; i--)
+        if (samplerPlugin->state.getChild(i).hasType(tracktion::IDs::SOUND))
+            samplerPlugin->state.removeChild(i, nullptr);
 
     YAML::Node rootNode =
         YAML::LoadFile(mappingFile.getFullPathName().toStdString());
