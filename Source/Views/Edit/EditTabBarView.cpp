@@ -196,22 +196,36 @@ void EditTabBarView::render(app_view_models::RenderPlanner::RenderType type) {
         return;
     }
 
-    int failures = 0;
+    // A track that makes no sound (e.g. MIDI clips but no instrument) produces
+    // no file, so count the files that were actually written.
+    int rendered = 0;
     for (const auto &job : jobs) {
         juce::Logger::writeToLog("Rendering " + job.file.getFullPathName());
         job.file.getParentDirectory().createDirectory();
         bool ok = tracktion::Renderer::renderToFile(
             "Render", job.file, edit, timeRange, job.tracksToDo, true, {},
             true);
-        if (!ok)
-            failures++;
+        if (ok && job.file.existsAsFile())
+            rendered++;
+        else
+            juce::Logger::writeToLog("Nothing rendered for " +
+                                     job.file.getFileName());
     }
 
-    juce::Logger::writeToLog("Render complete!");
-    if (failures > 0)
-        showMessage("Render failed (" + juce::String(failures) + ")", 2000);
+    // Don't leave an empty stems folder behind
+    if (type == RenderPlanner::RenderType::stems) {
+        auto stemsDirectory = jobs.getFirst().file.getParentDirectory();
+        if (stemsDirectory.isDirectory() &&
+            stemsDirectory.getNumberOfChildFiles(juce::File::findFiles) == 0)
+            stemsDirectory.deleteRecursively();
+    }
+
+    juce::Logger::writeToLog("Render complete! " + juce::String(rendered) +
+                             " of " + juce::String(jobs.size()) + " files");
+    if (rendered == 0)
+        showMessage("No audio to render", 1500);
     else if (type == RenderPlanner::RenderType::stems)
-        showMessage(juce::String(jobs.size()) + " stems rendered", 1500);
+        showMessage(juce::String(rendered) + " stems rendered", 1500);
     else
         showMessage("Render Complete!");
 }
