@@ -5,6 +5,15 @@ SynthSamplerViewModel::SynthSamplerViewModel(tracktion::SamplerPlugin *sampler)
 
     auto curFile = juce::File(curFilePath);
 
+    // Projects saved before the view state moved onto the plugin have no
+    // curFilePath here. If the plugin already has a sample loaded, adopt it
+    // instead of replacing it with the first file in the samples directory.
+    if (curFile == juce::String{""} && samplerPlugin->getNumSounds() > 0 &&
+        samplerPlugin->getSoundFile(0).getFile().existsAsFile()) {
+        curFile = samplerPlugin->getSoundFile(0).getFile();
+        curFilePath.setValue(curFile.getFullPathName(), nullptr);
+    }
+
     if (curFile == juce::String{""}) {
         // fist time initialization
         curDir = ConfigurationHelpers::getTempSamplesDirectory(
@@ -108,6 +117,15 @@ void SynthSamplerViewModel::updateThumb() {
 void SynthSamplerViewModel::fileChanged() {
     auto curFile = juce::File(curFilePath);
     if (curFile == juce::String{""}) {
+        return;
+    }
+
+    // If this file is already loaded, keep the existing gain and start/end
+    // times rather than resetting them.
+    if (samplerPlugin->getNumSounds() > 0 &&
+        samplerPlugin->getSoundFile(0).getFile() == curFile) {
+        updateThumb();
+        markAndUpdate(shouldUpdateSample);
         return;
     }
 

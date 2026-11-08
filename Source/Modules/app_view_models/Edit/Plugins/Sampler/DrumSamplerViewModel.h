@@ -28,6 +28,7 @@ class DrumSamplerViewModel : public app_view_models::SamplerViewModel {
 
     void readMappingFileIntoSampler(const juce::File &mappingFile,
                                     bool shouldUpdateSounds);
+    void rebuildSampleFilesFromPlugin();
     void updateDrumKits();
     void updateThumb();
 };

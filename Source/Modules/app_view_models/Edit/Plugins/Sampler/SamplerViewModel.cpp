@@ -4,23 +4,29 @@ namespace app_view_models {
 SamplerViewModel::SamplerViewModel(tracktion::SamplerPlugin *sampler,
                                    juce::Identifier stateIdentifier)
     : samplerPlugin(sampler),
-      state(samplerPlugin->edit.state.getOrCreateChildWithName(stateIdentifier,
-                                                               nullptr)),
+      // The view state (selected kit / file / sound) is stored inside the
+      // plugin's own state rather than on the edit. Previously it lived on
+      // the edit, so every sampler instance on every track shared a single
+      // view state, which caused the "last loaded sample shows up on all
+      // tracks" bug (#55). Storing it on the plugin also means it is saved
+      // and restored together with the plugin.
+      state(samplerPlugin->state.getOrCreateChildWithName(stateIdentifier,
+                                                          nullptr)),
       itemListState(state, 100), fullSampleThumbnailCache(5),
       fullSampleThumbnail(numSamplesForThumbnail, formatManager,
                           fullSampleThumbnailCache) {
     formatManager.registerBasicFormats();
     selectedSoundIndex.referTo(state, IDs::selectedSoundIndex, nullptr, 0);
+    // Listening to the plugin state also delivers property changes of the
+    // view state, since it is a child of the plugin state.
     samplerPlugin->state.addListener(this);
     fullSampleThumbnail.addChangeListener(this);
     itemListState.addListener(this);
-    state.addListener(this);
 }
 
 SamplerViewModel::~SamplerViewModel() {
     samplerPlugin->state.removeListener(this);
     itemListState.removeListener(this);
-    state.removeListener(this);
     fullSampleThumbnail.removeChangeListener(this);
 }
 

@@ -10,11 +10,27 @@ DrumSamplerViewModel::DrumSamplerViewModel(
     if (drumKitNames.size() > 0) {
         DBG("current kit index: " +
             std::to_string(itemListState.getSelectedItemIndex()));
-        juce::File currentMap = mapFiles[itemListState.getSelectedItemIndex()];
-        readMappingFileIntoSampler(currentMap, true);
+        if (samplerPlugin->getNumSounds() > 0) {
+            // The plugin already has a kit loaded (e.g. the plugin view was
+            // reopened or the project was reloaded). Don't reload the mapping
+            // file, since that would reset the gain and start/end times of
+            // every sound (#44). Just rebuild the list of sample files from
+            // the plugin.
+            rebuildSampleFilesFromPlugin();
+        } else {
+            juce::File currentMap =
+                mapFiles[itemListState.getSelectedItemIndex()];
+            readMappingFileIntoSampler(currentMap, true);
+        }
         DBG("updating thumb");
         updateThumb();
     }
+}
+
+void DrumSamplerViewModel::rebuildSampleFilesFromPlugin() {
+    drumSampleFiles.clear();
+    for (int i = 0; i < samplerPlugin->getNumSounds(); i++)
+        drumSampleFiles.add(samplerPlugin->getSoundFile(i).getFile());
 }
 
 juce::StringArray DrumSamplerViewModel::getItemNames() { return drumKitNames; }
@@ -53,9 +69,10 @@ void DrumSamplerViewModel::valueTreePropertyChanged(
 void DrumSamplerViewModel::readMappingFileIntoSampler(
     const juce::File &mappingFile, bool shouldUpdateSounds) {
     drumSampleFiles.clear();
-    for (int i = 0; i < samplerPlugin->getNumSounds(); i++) {
-        samplerPlugin->removeSound(i);
-    }
+    // Remove from the end: removing by ascending index while the count
+    // shrinks only removed every other sound, leaving stale sounds behind.
+    while (samplerPlugin->getNumSounds() > 0)
+        samplerPlugin->removeSound(samplerPlugin->getNumSounds() - 1);
 
     YAML::Node rootNode =
         YAML::LoadFile(mappingFile.getFullPathName().toStdString());
