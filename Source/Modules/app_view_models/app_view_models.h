@@ -74,6 +74,7 @@ namespace app_view_models {
 // Utilities
 #include "Utilities/FlaggedAsyncUpdater.h"
 #include "Utilities/EngineHelpers.h"
+#include "Utilities/Quantizer.h"
 
 // ItemList
 #include "Edit/ItemList/ItemListState.h"

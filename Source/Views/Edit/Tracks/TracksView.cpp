@@ -176,8 +176,12 @@ void TracksView::encoder4ButtonReleased() { viewModel.toggleMute(); }
 
 void TracksView::cutButtonReleased() {
     if (isShowing())
-        if (midiCommandManager.getFocusedComponent() == this)
-            viewModel.cutSelectedTracksClipAtPlayHead();
+        if (midiCommandManager.getFocusedComponent() == this) {
+            if (midiCommandManager.isControlDown)
+                viewModel.quantizeSelectedTracksClipAtPlayhead();
+            else
+                viewModel.cutSelectedTracksClipAtPlayHead();
+        }
 }
 
 void TracksView::pasteButtonReleased() {

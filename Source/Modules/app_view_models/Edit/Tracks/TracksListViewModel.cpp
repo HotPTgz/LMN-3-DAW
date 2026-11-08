@@ -126,6 +126,37 @@ void TracksListViewModel::cutSelectedTracksClipAtPlayHead() {
     }
 }
 
+int TracksListViewModel::quantizeSelectedTracksClipAtPlayhead() {
+    auto track =
+        dynamic_cast<tracktion::AudioTrack *>(listViewModel.getSelectedItem());
+    if (track == nullptr)
+        return -1;
+
+    auto position = edit.getTransport().getPosition();
+    auto midiClip =
+        dynamic_cast<tracktion::MidiClip *>(track->getNextTrackItemAt(position));
+    if (midiClip == nullptr || position < midiClip->getPosition().getStart() ||
+        position > midiClip->getPosition().getEnd())
+        return -1;
+
+    auto settings = edit.state.getOrCreateChildWithName(
+        IDs::QUANTIZE_SETTINGS, nullptr);
+    const auto &grids = Quantizer::getGrids();
+    int gridIndex = juce::jlimit(
+        0, grids.size() - 1,
+        int(settings.getProperty(IDs::quantizeGridIndex,
+                                 Quantizer::getDefaultGridIndex())));
+    // Swing only makes sense on straight grids
+    int swing = grids[gridIndex].isTriplet
+                    ? 0
+                    : int(settings.getProperty(IDs::quantizeSwing, 0));
+
+    // One transaction, so a single press of undo reverts the whole quantize
+    edit.getUndoManager().beginNewTransaction("Quantize");
+    return Quantizer::quantizeClip(*midiClip, grids[gridIndex].beats, swing,
+                                   &edit.getUndoManager());
+}
+
 void TracksListViewModel::mergeSelectedTracksClipsAtPlayhead() {
     if (auto track = dynamic_cast<tracktion::AudioTrack *>(
             listViewModel.getSelectedItem())) {

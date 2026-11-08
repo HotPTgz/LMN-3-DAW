@@ -21,6 +21,14 @@ class TempoSettingsViewModel : public juce::ValueTree::Listener,
 
     void enableTapMode();
 
+    // Quantize settings (stored per project)
+    void incrementQuantizeGrid();
+    void decrementQuantizeGrid();
+    void incrementSwing();
+    void decrementSwing();
+    juce::String getQuantizeGridName() const;
+    int getSwingPercent() const;
+
     class Listener {
       public:
         virtual ~Listener() = default;
@@ -28,6 +36,8 @@ class TempoSettingsViewModel : public juce::ValueTree::Listener,
         virtual void bpmChanged(const double newBpm, const double newBps) {}
         virtual void clickTrackGainChanged(const double newGain) {}
         virtual void tapModeChanged(const bool newTapMode) {}
+        virtual void quantizeSettingsChanged(const juce::String &gridName,
+                                             const int swingPercent) {}
     };
 
     void addListener(Listener *l);
@@ -46,6 +56,9 @@ class TempoSettingsViewModel : public juce::ValueTree::Listener,
     tracktion::Edit &edit;
     juce::ValueTree tempoSequenceState;
     juce::ValueTree clickTrackState;
+    juce::ValueTree quantizeState;
+    juce::CachedValue<int> quantizeGridIndex;
+    juce::CachedValue<int> quantizeSwing;
     juce::ListenerList<Listener> listeners;
 
     juce::Array<juce::Time> beatMeasurements;
@@ -56,6 +69,7 @@ class TempoSettingsViewModel : public juce::ValueTree::Listener,
     bool shouldUpdateBPM = false;
     bool shouldUpdateClickTrackGain = false;
     bool shouldUpdateTapMode = false;
+    bool shouldUpdateQuantizeSettings = false;
 
     void handleAsyncUpdate() override;
     void valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged,

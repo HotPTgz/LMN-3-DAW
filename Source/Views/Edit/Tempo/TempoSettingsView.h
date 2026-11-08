@@ -24,6 +24,12 @@ class TempoSettingsView
     void encoder1Increased() override;
     void encoder1Decreased() override;
 
+    // Quantize grid / swing used by Control + Cut on the tracks screen
+    void encoder2Increased() override;
+    void encoder2Decreased() override;
+    void encoder3Increased() override;
+    void encoder3Decreased() override;
+
     void encoder4Increased() override;
     void encoder4Decreased() override;
 
@@ -32,6 +38,8 @@ class TempoSettingsView
     void bpmChanged(const double newBpm, const double newBps) override;
     void clickTrackGainChanged(const double newGain) override;
     void tapModeChanged(const bool newTapMode) override;
+    void quantizeSettingsChanged(const juce::String &gridName,
+                                 const int swingPercent) override;
 
   private:
     tracktion::Edit &edit;
@@ -49,6 +57,7 @@ class TempoSettingsView
             FontData::FontAwesome6FreeSolid900_otfSize);
     juce::Font fontAwesomeFont = juce::Font(fontAwesomeTypeface);
     juce::Label tapIcon;
+    juce::Label quantizeLabel;
 
     LabelColour1LookAndFeel labelColour1LookAndFeel;
     AppLookAndFeel appLookAndFeel;

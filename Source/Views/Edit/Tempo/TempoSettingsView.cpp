@@ -4,7 +4,6 @@ TempoSettingsView::TempoSettingsView(tracktion::Edit &e,
                                      app_services::MidiCommandManager &mcm)
     : edit(e), viewModel(edit), midiCommandManager(mcm) {
     midiCommandManager.addListener(this);
-    viewModel.addListener(this);
 
     addAndMakeVisible(beatSettingsComponent);
 
@@ -34,6 +33,15 @@ TempoSettingsView::TempoSettingsView(tracktion::Edit &e,
     tapIcon.setAlwaysOnTop(true);
     tapIcon.setColour(juce::Label::textColourId, appLookAndFeel.textColour);
     addChildComponent(tapIcon);
+
+    quantizeLabel.setJustificationType(juce::Justification::centred);
+    quantizeLabel.setAlwaysOnTop(true);
+    quantizeLabel.setColour(juce::Label::textColourId,
+                            appLookAndFeel.textColour);
+    addAndMakeVisible(quantizeLabel);
+
+    // Added last so the listener callbacks can update every component
+    viewModel.addListener(this);
 }
 
 TempoSettingsView::~TempoSettingsView() {
@@ -69,6 +77,46 @@ void TempoSettingsView::resized() {
 
     tapIcon.setFont(fontAwesomeFont);
     tapIcon.setBounds(padding, padding, getHeight() * .11, getHeight() * .1);
+
+    int quantizeLabelHeight = getHeight() * .12;
+    quantizeLabel.setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(),
+                                     quantizeLabelHeight * .7,
+                                     juce::Font::plain));
+    quantizeLabel.setBounds(padding,
+                            getHeight() - padding - quantizeLabelHeight,
+                            gainIcon.getX() - 2 * padding,
+                            quantizeLabelHeight);
+}
+
+void TempoSettingsView::encoder2Increased() {
+    if (isShowing())
+        if (midiCommandManager.getFocusedComponent() == this)
+            viewModel.incrementQuantizeGrid();
+}
+
+void TempoSettingsView::encoder2Decreased() {
+    if (isShowing())
+        if (midiCommandManager.getFocusedComponent() == this)
+            viewModel.decrementQuantizeGrid();
+}
+
+void TempoSettingsView::encoder3Increased() {
+    if (isShowing())
+        if (midiCommandManager.getFocusedComponent() == this)
+            viewModel.incrementSwing();
+}
+
+void TempoSettingsView::encoder3Decreased() {
+    if (isShowing())
+        if (midiCommandManager.getFocusedComponent() == this)
+            viewModel.decrementSwing();
+}
+
+void TempoSettingsView::quantizeSettingsChanged(const juce::String &gridName,
+                                                const int swingPercent) {
+    quantizeLabel.setText("Quantize " + gridName + "   Swing " +
+                              juce::String(swingPercent) + "%",
+                          juce::dontSendNotification);
 }
 
 void TempoSettingsView::encoder1Increased() {

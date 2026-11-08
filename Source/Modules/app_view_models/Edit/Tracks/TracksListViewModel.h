@@ -24,6 +24,10 @@ class TracksListViewModel : public juce::ValueTree::Listener,
     void addTrack();
     void deleteSelectedTrack();
     void cutSelectedTracksClipAtPlayHead();
+    // Quantizes the MIDI clip under the playhead on the selected track using
+    // the project's quantize grid and swing. Returns the number of notes moved,
+    // or -1 if there is no MIDI clip under the playhead.
+    int quantizeSelectedTracksClipAtPlayhead();
     void pasteClipboardContentToTrackAtPlayhead();
     void splitSelectedTracksClipAtPlayHead();
     void mergeSelectedTracksClipsAtPlayhead();
