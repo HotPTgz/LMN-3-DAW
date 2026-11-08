@@ -11,7 +11,8 @@ class SettingsListView : public juce::Component,
                          public app_services::MidiCommandManager::Listener {
   public:
     SettingsListView(tracktion::Edit &e, juce::AudioDeviceManager &dm,
-                     app_services::MidiCommandManager &mcm);
+                     app_services::MidiCommandManager &mcm,
+                     app_services::ProjectManager &pm);
     ~SettingsListView() override;
     void paint(juce::Graphics &) override;
     void resized() override;
@@ -26,6 +27,7 @@ class SettingsListView : public juce::Component,
     tracktion::Edit &edit;
     juce::AudioDeviceManager &deviceManager;
     app_services::MidiCommandManager &midiCommandManager;
+    app_services::ProjectManager &projectManager;
     app_view_models::SettingsListViewModel viewModel;
     TitledListView titledList;
 

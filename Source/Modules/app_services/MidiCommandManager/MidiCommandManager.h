@@ -141,7 +141,7 @@ class MidiCommandManager : private juce::MidiInputCallback {
 
   private:
     tracktion::Engine &engine;
-    juce::Component *focusedComponent;
+    juce::Component *focusedComponent = nullptr;
     juce::ListenerList<Listener> listeners;
 
     // This is used to dispach an incoming message to the message thread

@@ -13,6 +13,7 @@ class SettingsListViewModel {
     juce::StringArray getItemNames();
     juce::String getSelectedItem();
 
+    const juce::String projectsSettingName = "Projects";
     const juce::String deviceTypeSettingName = "Device Type";
     const juce::String outputSettingName = "Output";
     const juce::String sampleRateSettingName = "Sample Rate";
@@ -24,7 +25,7 @@ class SettingsListViewModel {
     juce::ValueTree state;
     juce::StringArray settingNames =
         juce::StringArray(juce::Array<juce::String>(
-            {deviceTypeSettingName, outputSettingName, sampleRateSettingName,
+            {projectsSettingName, deviceTypeSettingName, outputSettingName, sampleRateSettingName,
              audioBufferSizeSettingName, midiInputSettingName}));
 
   public:

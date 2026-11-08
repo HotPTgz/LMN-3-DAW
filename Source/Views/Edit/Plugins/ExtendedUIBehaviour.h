@@ -155,13 +155,14 @@ class ExtendedUIBehaviour : public tracktion::UIBehaviour {
         }
 
         // Once the thread finishes, hide the progress view
-        app->hideProgressView();
+        if (app != nullptr)
+            app->hideProgressView();
     }
 
   private:
-    tracktion::Edit *edit;
-    app_services::MidiCommandManager *midiCommandManager;
-    App *app;
+    tracktion::Edit *edit = nullptr;
+    app_services::MidiCommandManager *midiCommandManager = nullptr;
+    App *app = nullptr;
 
     struct TaskRunner : public juce::Thread {
         explicit TaskRunner(tracktion::ThreadPoolJobWithProgress &t)

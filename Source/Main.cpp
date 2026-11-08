@@ -47,9 +47,41 @@ class GuiAppApplication : public juce::JUCEApplication {
 
         auto userAppDataDirectory = juce::File::getSpecialLocation(
             juce::File::userApplicationDataDirectory);
-        juce::File editFile =
-            userAppDataDirectory.getChildFile(getApplicationName())
-                .getChildFile("edit");
+        projectManager = std::make_unique<app_services::ProjectManager>(
+            userAppDataDirectory.getChildFile(getApplicationName()));
+
+        // Older versions kept a single project in <app data>/edit
+        auto migrated = projectManager->migrateLegacyEditIfNeeded();
+        if (migrated.existsAsFile())
+            juce::Logger::writeToLog("Migrated legacy edit to " +
+                                     migrated.getFullPathName());
+
+        ConfigurationHelpers::initSamples(engine);
+
+        loadEdit(projectManager->getStartupProject());
+
+        midiCommandManager =
+            std::make_unique<app_services::MidiCommandManager>(engine);
+
+        if (auto uiBehavior =
+                dynamic_cast<ExtendedUIBehaviour *>(&engine.getUIBehaviour())) {
+            uiBehavior->setEdit(edit.get());
+            uiBehavior->setMidiCommandManager(midiCommandManager.get());
+        }
+
+        projectManager->onOpenProjectRequested =
+            [this](const juce::File &projectFile) { openProject(projectFile); };
+
+        initialiseAudioDevices();
+        mainWindow = std::make_unique<MainWindow>(
+            getApplicationName(), engine, *edit, *midiCommandManager,
+            *projectManager);
+        splash->deleteAfterDelay(juce::RelativeTime::seconds(4.25), false);
+    }
+
+    // Loads (or creates, if it doesn't exist yet) the project and makes it
+    // the current edit.
+    void loadEdit(const juce::File &editFile) {
         if (editFile.existsAsFile()) {
             edit = tracktion::loadEditFromFile(engine, editFile);
         } else {
@@ -59,9 +91,10 @@ class GuiAppApplication : public juce::JUCEApplication {
 
             for (auto track : tracktion::getAudioTracks(*edit))
                 track->setColour(appLookAndFeel.getRandomColour());
-        }
 
-        ConfigurationHelpers::initSamples(engine);
+            // Write it out straight away so it shows up in the projects list
+            tracktion::EditFileOperations(*edit).save(true, true, false);
+        }
 
         // The master track does not have the default  plugins added to it by
         // default
@@ -80,19 +113,38 @@ class GuiAppApplication : public juce::JUCEApplication {
         edit->clickTrackEnabled.setValue(true, nullptr);
         edit->setCountInMode(tracktion::Edit::CountIn::oneBar);
 
-        midiCommandManager =
-            std::make_unique<app_services::MidiCommandManager>(engine);
+        projectManager->setCurrentProject(editFile);
+        juce::Logger::writeToLog("Opened project " + editFile.getFullPathName());
+    }
 
-        if (auto uiBehavior =
-                dynamic_cast<ExtendedUIBehaviour *>(&engine.getUIBehaviour())) {
-            uiBehavior->setEdit(edit.get());
-            uiBehavior->setMidiCommandManager(midiCommandManager.get());
+    // Saves the current project, tears down the UI and rebuilds it around the
+    // newly opened project. Every view holds a reference to the edit, so
+    // rebuilding the window is the simplest safe way to switch.
+    void openProject(const juce::File &projectFile) {
+        if (edit != nullptr) {
+            edit->getTransport().stop(false, false);
+            tracktion::EditFileOperations(*edit).save(true, true, false);
         }
 
-        initialiseAudioDevices();
-        mainWindow = std::make_unique<MainWindow>(getApplicationName(), engine,
-                                                  *edit, *midiCommandManager);
-        splash->deleteAfterDelay(juce::RelativeTime::seconds(4.25), false);
+        midiCommandManager->setFocusedComponent(nullptr);
+        auto uiBehavior =
+            dynamic_cast<ExtendedUIBehaviour *>(&engine.getUIBehaviour());
+        if (uiBehavior != nullptr) {
+            uiBehavior->setApp(nullptr);
+            uiBehavior->setEdit(nullptr);
+        }
+
+        mainWindow = nullptr;
+        edit = nullptr;
+
+        loadEdit(projectFile);
+
+        if (uiBehavior != nullptr)
+            uiBehavior->setEdit(edit.get());
+
+        mainWindow = std::make_unique<MainWindow>(
+            getApplicationName(), engine, *edit, *midiCommandManager,
+            *projectManager);
     }
 
     void initialiseAudioDevices() {
@@ -139,14 +191,15 @@ class GuiAppApplication : public juce::JUCEApplication {
       public:
         explicit MainWindow(juce::String name, tracktion::Engine &e,
                             tracktion::Edit &ed,
-                            app_services::MidiCommandManager &mcm)
+                            app_services::MidiCommandManager &mcm,
+                            app_services::ProjectManager &pm)
             : DocumentWindow(
                   name,
                   juce::Desktop::getInstance()
                       .getDefaultLookAndFeel()
                       .findColour(ResizableWindow::backgroundColourId),
                   DocumentWindow::allButtons),
-              engine(e), edit(ed), midiCommandManager(mcm) {
+              engine(e), edit(ed), midiCommandManager(mcm), projectManager(pm) {
             auto userAppDataDirectory = juce::File::getSpecialLocation(
                 juce::File::userApplicationDataDirectory);
             auto configFile =
@@ -159,7 +212,8 @@ class GuiAppApplication : public juce::JUCEApplication {
                 setTitleBarHeight(0);
             }
 
-            setContentOwned(new App(edit, midiCommandManager), true);
+            setContentOwned(new App(edit, midiCommandManager, projectManager),
+                            true);
 
 #if JUCE_IOS || JUCE_ANDROID
             setFullScreen(true);
@@ -196,6 +250,7 @@ class GuiAppApplication : public juce::JUCEApplication {
         tracktion::Engine &engine;
         tracktion::Edit &edit;
         app_services::MidiCommandManager &midiCommandManager;
+        app_services::ProjectManager &projectManager;
         juce::ValueTree state;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
@@ -208,6 +263,7 @@ class GuiAppApplication : public juce::JUCEApplication {
                              std::make_unique<ExtendedUIBehaviour>(), nullptr};
     std::unique_ptr<tracktion::Edit> edit;
     std::unique_ptr<app_services::MidiCommandManager> midiCommandManager;
+    std::unique_ptr<app_services::ProjectManager> projectManager;
     AppLookAndFeel appLookAndFeel;
     juce::SplashScreen *splash;
 };

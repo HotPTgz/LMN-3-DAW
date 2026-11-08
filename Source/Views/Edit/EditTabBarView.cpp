@@ -9,9 +9,10 @@
 #include "TrackPluginsListView.h"
 #include "TracksView.h"
 EditTabBarView::EditTabBarView(tracktion::Edit &e,
-                               app_services::MidiCommandManager &mcm)
+                               app_services::MidiCommandManager &mcm,
+                               app_services::ProjectManager &pm)
     : TabbedComponent(juce::TabbedButtonBar::Orientation::TabsAtTop), edit(e),
-      midiCommandManager(mcm), viewModel(edit) {
+      midiCommandManager(mcm), projectManager(pm), viewModel(edit) {
     // Note: Some tabs are on a per-track basis and are added in
     // selectedIndexChanged, not here this is possible since this view is a
     // listener of the tracks item list state
@@ -24,7 +25,7 @@ EditTabBarView::EditTabBarView(tracktion::Edit &e,
     addTab(settingsTabName, juce::Colours::transparentBlack,
            new app_navigation::StackNavigationController(new SettingsListView(
                edit, edit.engine.getDeviceManager().deviceManager,
-               midiCommandManager)),
+               midiCommandManager, projectManager)),
            true);
 
     juce::StringArray tabNames = getTabNames();

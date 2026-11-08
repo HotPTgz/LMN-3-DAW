@@ -2,9 +2,10 @@
 #include "TrackView.h"
 #include <app_configuration/app_configuration.h>
 
-App::App(tracktion::Edit &e, app_services::MidiCommandManager &mcm)
+App::App(tracktion::Edit &e, app_services::MidiCommandManager &mcm,
+         app_services::ProjectManager &pm)
     : edit(e), midiCommandManager(mcm),
-      editTabBarView(edit, midiCommandManager) {
+      editTabBarView(edit, midiCommandManager, pm) {
     edit.setTimecodeFormat(tracktion::TimecodeType::millisecs);
 
     auto userAppDataDirectory = juce::File::getSpecialLocation(

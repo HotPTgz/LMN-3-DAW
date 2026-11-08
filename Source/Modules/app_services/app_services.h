@@ -18,6 +18,7 @@ namespace app_services {
 
     class MidiCommandManager;
     class TimelineCamera;
+    class ProjectManager;
 
 }
 
@@ -27,6 +28,7 @@ namespace app_services {
 #include <juce_graphics/juce_graphics.h>
 #include <tracktion_engine/tracktion_engine.h>
 #include <functional>
+#include <algorithm>
 
 // MidiCommandManager
 #include "MidiCommandManager/MidiCommandManager.h"
@@ -34,3 +36,6 @@ namespace app_services {
 
 // TimelineCamera
 #include "TimelineCamera/TimelineCamera.h"
+
+// ProjectManager
+#include "ProjectManager/ProjectManager.h"

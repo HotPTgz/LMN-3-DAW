@@ -3,13 +3,15 @@
 #include "DeviceTypeListView.h"
 #include "MidiInputListView.h"
 #include "OutputListView.h"
+#include "ProjectsListView.h"
 #include "SampleRateListView.h"
 #include <app_navigation/app_navigation.h>
 
 SettingsListView::SettingsListView(tracktion::Edit &e,
                                    juce::AudioDeviceManager &dm,
-                                   app_services::MidiCommandManager &mcm)
-    : edit(e), deviceManager(dm), midiCommandManager(mcm),
+                                   app_services::MidiCommandManager &mcm,
+                                   app_services::ProjectManager &pm)
+    : edit(e), deviceManager(dm), midiCommandManager(mcm), projectManager(pm),
       viewModel(e, deviceManager),
       titledList(viewModel.getItemNames(), "Settings",
                  ListTitle::IconType::FONT_AWESOME,
@@ -59,7 +61,10 @@ void SettingsListView::encoder1ButtonReleased() {
             if (auto stackNavigationController = findParentComponentOfClass<
                     app_navigation::StackNavigationController>()) {
                 juce::String selectedItem = viewModel.getSelectedItem();
-                if (selectedItem == viewModel.deviceTypeSettingName) {
+                if (selectedItem == viewModel.projectsSettingName) {
+                    stackNavigationController->push(
+                        new ProjectsListView(projectManager, midiCommandManager));
+                } else if (selectedItem == viewModel.deviceTypeSettingName) {
                     stackNavigationController->push(new DeviceTypeListView(
                         edit, deviceManager, midiCommandManager));
                 } else if (selectedItem == viewModel.outputSettingName) {
