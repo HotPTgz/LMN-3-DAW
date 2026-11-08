@@ -42,6 +42,7 @@ target_sources(LMN-3  PRIVATE
     Source/Views/Edit/Settings/MidiInputListView.cpp
     Source/Views/Edit/Settings/AudioBufferSizeListView.cpp
     Source/Views/Edit/Settings/ProjectsListView.cpp
+    Source/Views/Edit/RenderMenuComponent.cpp
     Source/Views/SimpleList/SimpleListItemView.cpp
     Source/Views/SimpleList/SimpleListModel.cpp
     Source/Views/SimpleList/SimpleListView.cpp

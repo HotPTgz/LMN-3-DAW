@@ -1,6 +1,7 @@
 #pragma once
 #include "MessageBox.h"
 #include "OctaveDisplayComponent.h"
+#include "RenderMenuComponent.h"
 #include <app_navigation/app_navigation.h>
 #include <app_services/app_services.h>
 #include <app_view_models/app_view_models.h>
@@ -59,9 +60,12 @@ class EditTabBarView : public juce::TabbedComponent,
 
     OctaveDisplayComponent octaveDisplayComponent;
     MessageBox messageBox;
+    RenderMenuComponent renderMenu;
 
     void timerCallback() override;
     void resetTrackRelatedTabs();
+    void render(app_view_models::RenderPlanner::RenderType type);
+    void showMessage(const juce::String &message, int durationMs = 1000);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EditTabBarView)
 };

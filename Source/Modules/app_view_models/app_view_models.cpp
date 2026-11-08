@@ -5,6 +5,7 @@
 #include "Utilities/FlaggedAsyncUpdater.cpp"
 #include "Utilities/EngineHelpers.cpp"
 #include "Utilities/Quantizer.cpp"
+#include "Utilities/RenderPlanner.cpp"
 
 // EditItemList
 #include "Edit/ItemList/ItemListState.cpp"
