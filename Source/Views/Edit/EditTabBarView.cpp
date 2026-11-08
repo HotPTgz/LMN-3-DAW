@@ -110,8 +110,7 @@ void EditTabBarView::resized() {
                          renderMenuHeight);
 }
 
-void EditTabBarView::showMessage(const juce::String &message,
-                                 int durationMs) {
+void EditTabBarView::showMessage(const juce::String &message, int durationMs) {
     messageBox.setMessage(message);
     // must call resized so message box width is updated to fit text
     resized();
@@ -178,8 +177,7 @@ void EditTabBarView::render(app_view_models::RenderPlanner::RenderType type) {
     edit.getTransport().stop(false, false);
 
     auto rendersDirectory =
-        juce::File::getSpecialLocation(
-            juce::File::userApplicationDataDirectory)
+        juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
             .getChildFile(applicationName)
             .getChildFile("renders");
 
@@ -202,9 +200,9 @@ void EditTabBarView::render(app_view_models::RenderPlanner::RenderType type) {
     for (const auto &job : jobs) {
         juce::Logger::writeToLog("Rendering " + job.file.getFullPathName());
         job.file.getParentDirectory().createDirectory();
-        bool ok = tracktion::Renderer::renderToFile(
-            "Render", job.file, edit, timeRange, job.tracksToDo, true, {},
-            true);
+        bool ok = tracktion::Renderer::renderToFile("Render", job.file, edit,
+                                                    timeRange, job.tracksToDo,
+                                                    true, {}, true);
         if (ok && job.file.existsAsFile())
             rendered++;
         else

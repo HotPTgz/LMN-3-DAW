@@ -91,7 +91,8 @@ void ProjectsListView::encoder1Decreased() {
 }
 
 void ProjectsListView::encoder1ButtonReleased() {
-    if (!hasFocus() || !juce::isPositiveAndBelow(selectedIndex, projects.size()))
+    if (!hasFocus() ||
+        !juce::isPositiveAndBelow(selectedIndex, projects.size()))
         return;
 
     auto selected = projects[selectedIndex];
@@ -113,7 +114,8 @@ void ProjectsListView::plusButtonReleased() {
 }
 
 void ProjectsListView::minusButtonReleased() {
-    if (!hasFocus() || !juce::isPositiveAndBelow(selectedIndex, projects.size()))
+    if (!hasFocus() ||
+        !juce::isPositiveAndBelow(selectedIndex, projects.size()))
         return;
 
     auto selected = projects[selectedIndex];

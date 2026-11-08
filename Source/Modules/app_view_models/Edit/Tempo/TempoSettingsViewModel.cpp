@@ -112,8 +112,7 @@ void TempoSettingsViewModel::handleAsyncUpdate() {
 
     if (compareAndReset(shouldUpdateQuantizeSettings))
         listeners.call([this](Listener &l) {
-            l.quantizeSettingsChanged(getQuantizeGridName(),
-                                      getSwingPercent());
+            l.quantizeSettingsChanged(getQuantizeGridName(), getSwingPercent());
         });
 }
 
@@ -145,17 +144,17 @@ void TempoSettingsViewModel::decrementQuantizeGrid() {
 }
 
 void TempoSettingsViewModel::incrementSwing() {
-    quantizeSwing.setValue(juce::jlimit(0, Quantizer::maxSwingPercent,
-                                        quantizeSwing.get() +
-                                            Quantizer::swingStepPercent),
-                           nullptr);
+    quantizeSwing.setValue(
+        juce::jlimit(0, Quantizer::maxSwingPercent,
+                     quantizeSwing.get() + Quantizer::swingStepPercent),
+        nullptr);
 }
 
 void TempoSettingsViewModel::decrementSwing() {
-    quantizeSwing.setValue(juce::jlimit(0, Quantizer::maxSwingPercent,
-                                        quantizeSwing.get() -
-                                            Quantizer::swingStepPercent),
-                           nullptr);
+    quantizeSwing.setValue(
+        juce::jlimit(0, Quantizer::maxSwingPercent,
+                     quantizeSwing.get() - Quantizer::swingStepPercent),
+        nullptr);
 }
 
 juce::String TempoSettingsViewModel::getQuantizeGridName() const {

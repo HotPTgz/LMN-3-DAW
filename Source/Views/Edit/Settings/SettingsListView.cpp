@@ -62,8 +62,8 @@ void SettingsListView::encoder1ButtonReleased() {
                     app_navigation::StackNavigationController>()) {
                 juce::String selectedItem = viewModel.getSelectedItem();
                 if (selectedItem == viewModel.projectsSettingName) {
-                    stackNavigationController->push(
-                        new ProjectsListView(projectManager, midiCommandManager));
+                    stackNavigationController->push(new ProjectsListView(
+                        projectManager, midiCommandManager));
                 } else if (selectedItem == viewModel.deviceTypeSettingName) {
                     stackNavigationController->push(new DeviceTypeListView(
                         edit, deviceManager, midiCommandManager));

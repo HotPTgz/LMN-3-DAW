@@ -32,9 +32,9 @@ TEST(QuantizerTest, twoThirdsSwingIsTripletShuffle) {
 }
 
 TEST(QuantizerTest, swingIsClampedToMaximum) {
-    EXPECT_DOUBLE_EQ(quantizeBeat(0.5, 0.5, 200),
-                     quantizeBeat(0.5, 0.5,
-                                  app_view_models::Quantizer::maxSwingPercent));
+    EXPECT_DOUBLE_EQ(
+        quantizeBeat(0.5, 0.5, 200),
+        quantizeBeat(0.5, 0.5, app_view_models::Quantizer::maxSwingPercent));
 }
 
 TEST(QuantizerTest, tripletGrid) {
@@ -77,8 +77,8 @@ TEST_F(QuantizeClipTest, movesNoteStartsAndKeepsLengths) {
     sequence.addNote(62, tracktion::BeatPosition::fromBeats(1.0),
                      tracktion::BeatDuration::fromBeats(0.3), 100, 0, nullptr);
 
-    int moved = app_view_models::Quantizer::quantizeClip(*clip, 0.25, 0,
-                                                         &edit->getUndoManager());
+    int moved = app_view_models::Quantizer::quantizeClip(
+        *clip, 0.25, 0, &edit->getUndoManager());
     EXPECT_EQ(moved, 1);
 
     auto notes = sequence.getNotes();

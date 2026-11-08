@@ -34,8 +34,10 @@ void DrumSamplerViewModel::rebuildSampleFilesFromPlugin() {
     drumSampleFiles.clear();
     for (auto child : samplerPlugin->state)
         if (child.hasType(tracktion::IDs::SOUND))
-            drumSampleFiles.add(tracktion::SourceFileReference::findFileFromString(
-                samplerPlugin->edit, child[tracktion::IDs::source].toString()));
+            drumSampleFiles.add(
+                tracktion::SourceFileReference::findFileFromString(
+                    samplerPlugin->edit,
+                    child[tracktion::IDs::source].toString()));
 }
 
 juce::StringArray DrumSamplerViewModel::getItemNames() { return drumKitNames; }

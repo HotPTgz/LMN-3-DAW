@@ -84,8 +84,7 @@ void TempoSettingsView::resized() {
                                      juce::Font::plain));
     quantizeLabel.setBounds(padding,
                             getHeight() - padding - quantizeLabelHeight,
-                            gainIcon.getX() - 2 * padding,
-                            quantizeLabelHeight);
+                            gainIcon.getX() - 2 * padding, quantizeLabelHeight);
 }
 
 void TempoSettingsView::encoder2Increased() {

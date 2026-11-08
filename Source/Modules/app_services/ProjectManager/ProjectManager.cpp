@@ -14,13 +14,12 @@ juce::File ProjectManager::getProjectsDirectory() const {
 
 juce::Array<juce::File> ProjectManager::getProjects() const {
     auto projects = getProjectsDirectory().findChildFiles(
-        juce::File::findFiles, false,
-        juce::String("*") + projectFileExtension);
+        juce::File::findFiles, false, juce::String("*") + projectFileExtension);
 
     std::sort(projects.begin(), projects.end(),
               [](const juce::File &a, const juce::File &b) {
-                  return getProjectName(a).compareNatural(
-                             getProjectName(b)) < 0;
+                  return getProjectName(a).compareNatural(getProjectName(b)) <
+                         0;
               });
     return projects;
 }
@@ -48,9 +47,8 @@ juce::File ProjectManager::getNextNewProjectFile() const {
         }
     }
 
-    return getProjectsDirectory().getChildFile(prefix +
-                                               juce::String(highest + 1) +
-                                               projectFileExtension);
+    return getProjectsDirectory().getChildFile(
+        prefix + juce::String(highest + 1) + projectFileExtension);
 }
 
 bool ProjectManager::deleteProject(const juce::File &projectFile) {

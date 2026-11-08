@@ -133,14 +133,14 @@ int TracksListViewModel::quantizeSelectedTracksClipAtPlayhead() {
         return -1;
 
     auto position = edit.getTransport().getPosition();
-    auto midiClip =
-        dynamic_cast<tracktion::MidiClip *>(track->getNextTrackItemAt(position));
+    auto midiClip = dynamic_cast<tracktion::MidiClip *>(
+        track->getNextTrackItemAt(position));
     if (midiClip == nullptr || position < midiClip->getPosition().getStart() ||
         position > midiClip->getPosition().getEnd())
         return -1;
 
-    auto settings = edit.state.getOrCreateChildWithName(
-        IDs::QUANTIZE_SETTINGS, nullptr);
+    auto settings =
+        edit.state.getOrCreateChildWithName(IDs::QUANTIZE_SETTINGS, nullptr);
     const auto &grids = Quantizer::getGrids();
     int gridIndex = juce::jlimit(
         0, grids.size() - 1,

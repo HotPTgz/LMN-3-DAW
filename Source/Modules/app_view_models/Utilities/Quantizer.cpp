@@ -57,7 +57,8 @@ int quantizeClip(tracktion::MidiClip &clip, double gridBeats, int swingPercent,
     // Copy the list, since moving notes can re-sort the sequence
     auto notes = sequence.getNotes();
     for (auto note : notes) {
-        const double editBeat = contentStartBeat + note->getStartBeat().inBeats();
+        const double editBeat =
+            contentStartBeat + note->getStartBeat().inBeats();
         const double quantizedEditBeat =
             quantizeBeat(editBeat, gridBeats, swingPercent);
         const double newStartBeat =

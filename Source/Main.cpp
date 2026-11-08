@@ -73,9 +73,9 @@ class GuiAppApplication : public juce::JUCEApplication {
             [this](const juce::File &projectFile) { openProject(projectFile); };
 
         initialiseAudioDevices();
-        mainWindow = std::make_unique<MainWindow>(
-            getApplicationName(), engine, *edit, *midiCommandManager,
-            *projectManager);
+        mainWindow =
+            std::make_unique<MainWindow>(getApplicationName(), engine, *edit,
+                                         *midiCommandManager, *projectManager);
         splash->deleteAfterDelay(juce::RelativeTime::seconds(4.25), false);
     }
 
@@ -114,7 +114,8 @@ class GuiAppApplication : public juce::JUCEApplication {
         edit->setCountInMode(tracktion::Edit::CountIn::oneBar);
 
         projectManager->setCurrentProject(editFile);
-        juce::Logger::writeToLog("Opened project " + editFile.getFullPathName());
+        juce::Logger::writeToLog("Opened project " +
+                                 editFile.getFullPathName());
     }
 
     // Saves the current project, tears down the UI and rebuilds it around the
@@ -142,9 +143,9 @@ class GuiAppApplication : public juce::JUCEApplication {
         if (uiBehavior != nullptr)
             uiBehavior->setEdit(edit.get());
 
-        mainWindow = std::make_unique<MainWindow>(
-            getApplicationName(), engine, *edit, *midiCommandManager,
-            *projectManager);
+        mainWindow =
+            std::make_unique<MainWindow>(getApplicationName(), engine, *edit,
+                                         *midiCommandManager, *projectManager);
     }
 
     void initialiseAudioDevices() {

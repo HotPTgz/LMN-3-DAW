@@ -48,8 +48,8 @@ juce::Array<RenderJob> planRender(tracktion::Edit &edit, RenderType type,
 
     if (type == RenderType::mix) {
         RenderJob job;
-        job.file = rendersDirectory.getNonexistentChildFile(baseName, ".wav",
-                                                            false);
+        job.file =
+            rendersDirectory.getNonexistentChildFile(baseName, ".wav", false);
         for (int i = 0; i < allTracks.size(); i++)
             job.tracksToDo.setBit(i);
         jobs.add(job);

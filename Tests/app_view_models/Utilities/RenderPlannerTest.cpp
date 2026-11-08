@@ -41,8 +41,7 @@ TEST_F(RenderPlannerTest, mixRendersAllTracksIntoOneNamedFile) {
     auto jobs = app_view_models::RenderPlanner::planRender(
         *edit, RenderType::mix, rendersDirectory, time);
     ASSERT_EQ(jobs.size(), 1);
-    EXPECT_EQ(jobs[0].file.getFileName(),
-              "My Song_mix_2026-11-08_130512.wav");
+    EXPECT_EQ(jobs[0].file.getFileName(), "My Song_mix_2026-11-08_130512.wav");
     EXPECT_EQ(jobs[0].file.getParentDirectory(), rendersDirectory);
     EXPECT_EQ(jobs[0].tracksToDo.countNumberOfSetBits(),
               tracktion::getAllTracks(*edit).size());
@@ -80,11 +79,10 @@ TEST_F(RenderPlannerTest, usesLoopRangeWhenLooping) {
 
     transport.looping.setValue(false, nullptr);
     EXPECT_FALSE(app_view_models::RenderPlanner::isLoopRender(*edit));
-    EXPECT_DOUBLE_EQ(
-        app_view_models::RenderPlanner::getRenderRange(*edit)
-            .getStart()
-            .inSeconds(),
-        0.0);
+    EXPECT_DOUBLE_EQ(app_view_models::RenderPlanner::getRenderRange(*edit)
+                         .getStart()
+                         .inSeconds(),
+                     0.0);
 
     transport.looping.setValue(true, nullptr);
     EXPECT_TRUE(app_view_models::RenderPlanner::isLoopRender(*edit));
@@ -99,8 +97,7 @@ TEST_F(RenderPlannerTest, usesLoopRangeWhenLooping) {
 }
 
 TEST_F(RenderPlannerTest, doesNotOverwriteExistingRenders) {
-    rendersDirectory.getChildFile("My Song_mix_2026-11-08_130512.wav")
-        .create();
+    rendersDirectory.getChildFile("My Song_mix_2026-11-08_130512.wav").create();
     auto jobs = app_view_models::RenderPlanner::planRender(
         *edit, RenderType::mix, rendersDirectory, time);
     EXPECT_FALSE(jobs[0].file.exists());

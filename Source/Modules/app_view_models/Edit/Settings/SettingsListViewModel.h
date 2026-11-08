@@ -25,8 +25,9 @@ class SettingsListViewModel {
     juce::ValueTree state;
     juce::StringArray settingNames =
         juce::StringArray(juce::Array<juce::String>(
-            {projectsSettingName, deviceTypeSettingName, outputSettingName, sampleRateSettingName,
-             audioBufferSizeSettingName, midiInputSettingName}));
+            {projectsSettingName, deviceTypeSettingName, outputSettingName,
+             sampleRateSettingName, audioBufferSizeSettingName,
+             midiInputSettingName}));
 
   public:
     // Must appear below the other variables since it needs to be initialized
