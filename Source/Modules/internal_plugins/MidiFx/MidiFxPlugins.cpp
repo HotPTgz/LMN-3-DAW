@@ -10,12 +10,10 @@ bool MidiFxPlugin::isMidiFx(const tracktion::Plugin &plugin) {
     return dynamic_cast<const MidiFxPlugin *>(&plugin) != nullptr;
 }
 
-tracktion::AutomatableParameter *
-MidiFxPlugin::addChoiceParam(const juce::String &paramID,
-                             const juce::String &name,
-                             const juce::StringArray &choices,
-                             juce::CachedValue<float> &value,
-                             float defaultIndex) {
+tracktion::AutomatableParameter *MidiFxPlugin::addChoiceParam(
+    const juce::String &paramID, const juce::String &name,
+    const juce::StringArray &choices, juce::CachedValue<float> &value,
+    float defaultIndex) {
     value.referTo(state, juce::Identifier(paramID), getUndoManager(),
                   defaultIndex);
     auto p = addParam(
@@ -69,15 +67,12 @@ ArpeggiatorPlugin::ArpeggiatorPlugin(tracktion::PluginCreationInfo info)
                           modeValue, 0.0f);
     rate = addChoiceParam("rate", TRANS("Rate"), midifx::Arp::getRateNames(),
                           rateValue, 4.0f); // 1/16
-    octaves = addNumberParam("octaves", TRANS("Octaves"), {1.0f, 4.0f}, 1.0f,
-                             octavesValue, 1.0f, [](float v) {
-                                 return juce::String(juce::roundToInt(v));
-                             });
-    gate = addNumberParam("gate", TRANS("Gate"), {0.1f, 1.0f}, 0.05f, gateValue,
-                          0.5f, [](float v) {
-                              return juce::String(juce::roundToInt(v * 100)) +
-                                     "%";
-                          });
+    octaves = addNumberParam(
+        "octaves", TRANS("Octaves"), {1.0f, 4.0f}, 1.0f, octavesValue, 1.0f,
+        [](float v) { return juce::String(juce::roundToInt(v)); });
+    gate = addNumberParam(
+        "gate", TRANS("Gate"), {0.1f, 1.0f}, 0.05f, gateValue, 0.5f,
+        [](float v) { return juce::String(juce::roundToInt(v * 100)) + "%"; });
     latch = addChoiceParam("latch", TRANS("Latch"), {"Off", "On"}, latchValue,
                            0.0f);
 }
@@ -88,11 +83,13 @@ ArpeggiatorPlugin::~ArpeggiatorPlugin() {
         p->detachFromCurrentValue();
 }
 
-void ArpeggiatorPlugin::initialise(const tracktion::PluginInitialisationInfo &) {
+void ArpeggiatorPlugin::initialise(
+    const tracktion::PluginInitialisationInfo &) {
     freeRunningBeat = 0.0;
 }
 
-void ArpeggiatorPlugin::applyToBuffer(const tracktion::PluginRenderContext &fc) {
+void ArpeggiatorPlugin::applyToBuffer(
+    const tracktion::PluginRenderContext &fc) {
     if (fc.bufferForMidiMessages == nullptr)
         return;
 
@@ -157,7 +154,8 @@ void ScaleLockPlugin::applyToBuffer(const tracktion::PluginRenderContext &fc) {
         int note = m.getNoteNumber();
 
         if (m.isNoteOn()) {
-            int snapped = midifx::Scales::snapToScale(note, rootNote, scaleIndex);
+            int snapped =
+                midifx::Scales::snapToScale(note, rootNote, scaleIndex);
             mappedNote[channel][note] = snapped;
             m.setNoteNumber(snapped);
         } else {
@@ -181,8 +179,9 @@ ChordPlugin::ChordPlugin(tracktion::PluginCreationInfo info)
     inversion = addChoiceParam("inversion", TRANS("Inversion"),
                                midifx::Chords::getInversionNames(),
                                inversionValue, 0.0f);
-    spread = addChoiceParam("spread", TRANS("Voicing"),
-                            midifx::Chords::getSpreadNames(), spreadValue, 0.0f);
+    spread =
+        addChoiceParam("spread", TRANS("Voicing"),
+                       midifx::Chords::getSpreadNames(), spreadValue, 0.0f);
 }
 
 ChordPlugin::~ChordPlugin() {

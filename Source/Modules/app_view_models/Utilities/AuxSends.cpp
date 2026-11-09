@@ -6,7 +6,8 @@ namespace AuxSends {
 juce::String getBusName(int bus) { return bus == 0 ? "FX A" : "FX B"; }
 
 tracktion::AuxSendPlugin *findSend(tracktion::Track &track, int bus) {
-    for (auto send : track.pluginList.getPluginsOfType<tracktion::AuxSendPlugin>())
+    for (auto send :
+         track.pluginList.getPluginsOfType<tracktion::AuxSendPlugin>())
         if (send->getBusNumber() == bus)
             return send;
     return nullptr;
@@ -45,8 +46,10 @@ tracktion::AudioTrack *getOrCreateReturnTrack(tracktion::Edit &edit, int bus) {
                               : juce::Colour(0xffb16286));
     edit.setAuxBusName(bus, getBusName(bus));
 
-    if (auto ret = createPlugin(edit, tracktion::AuxReturnPlugin::xmlTypeName)) {
-        if (auto auxReturn = dynamic_cast<tracktion::AuxReturnPlugin *>(ret.get()))
+    if (auto ret =
+            createPlugin(edit, tracktion::AuxReturnPlugin::xmlTypeName)) {
+        if (auto auxReturn =
+                dynamic_cast<tracktion::AuxReturnPlugin *>(ret.get()))
             auxReturn->busNumber = bus;
         track->pluginList.insertPlugin(ret, 0, nullptr);
     }
@@ -55,7 +58,8 @@ tracktion::AudioTrack *getOrCreateReturnTrack(tracktion::Edit &edit, int bus) {
     // track should only carry the effected signal, so make it fully wet.
     if (bus == 0) {
         if (auto p = createPlugin(edit, tracktion::ReverbPlugin::xmlTypeName)) {
-            if (auto reverb = dynamic_cast<tracktion::ReverbPlugin *>(p.get())) {
+            if (auto reverb =
+                    dynamic_cast<tracktion::ReverbPlugin *>(p.get())) {
                 reverb->setWet(1.0f);
                 reverb->setDry(0.0f);
             }
@@ -81,7 +85,8 @@ float getSendLevel(tracktion::Track &track, int bus) {
 }
 
 static tracktion::AuxSendPlugin *createSend(tracktion::Track &track, int bus) {
-    auto plugin = createPlugin(track.edit, tracktion::AuxSendPlugin::xmlTypeName);
+    auto plugin =
+        createPlugin(track.edit, tracktion::AuxSendPlugin::xmlTypeName);
     auto send = dynamic_cast<tracktion::AuxSendPlugin *>(plugin.get());
     if (send == nullptr)
         return nullptr;

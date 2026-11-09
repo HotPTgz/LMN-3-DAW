@@ -66,8 +66,8 @@ class ArpEngineTest : public ::testing::Test {
         std::vector<Event> result;
         for (auto &m : midi)
             if (m.isNoteOn() || m.isNoteOff())
-                result.push_back({m.isNoteOn(), m.getNoteNumber(),
-                                  m.getTimeStamp()});
+                result.push_back(
+                    {m.isNoteOn(), m.getNoteNumber(), m.getTimeStamp()});
         return result;
     }
 
@@ -82,8 +82,9 @@ class ArpEngineTest : public ::testing::Test {
     static void press(tracktion::MidiMessageArray &midi,
                       std::initializer_list<int> notes, double time = 0.0) {
         for (int n : notes)
-            midi.addMidiMessage(juce::MidiMessage::noteOn(1, n, juce::uint8(90)),
-                                time, tracktion::MidiMessageArray::notMPE);
+            midi.addMidiMessage(
+                juce::MidiMessage::noteOn(1, n, juce::uint8(90)), time,
+                tracktion::MidiMessageArray::notMPE);
     }
 
     static void release(tracktion::MidiMessageArray &midi,
@@ -248,8 +249,8 @@ class PluginPlacementTest : public ::testing::Test {
 
 TEST_F(PluginPlacementTest, midiFxGoBeforeTheInstrumentInOrderAdded) {
     using namespace app_view_models;
-    PluginPlacement::insertPlugin(*track,
-                                  create(tracktion::FourOscPlugin::xmlTypeName));
+    PluginPlacement::insertPlugin(
+        *track, create(tracktion::FourOscPlugin::xmlTypeName));
     PluginPlacement::insertPlugin(
         *track, create(internal_plugins::ChordPlugin::xmlTypeName));
     PluginPlacement::insertPlugin(
@@ -265,10 +266,10 @@ TEST_F(PluginPlacementTest, newInstrumentReplacesOldOneAfterMidiFx) {
     using namespace app_view_models;
     PluginPlacement::insertPlugin(
         *track, create(internal_plugins::ScaleLockPlugin::xmlTypeName));
-    PluginPlacement::insertPlugin(*track,
-                                  create(tracktion::FourOscPlugin::xmlTypeName));
-    PluginPlacement::insertPlugin(*track,
-                                  create(tracktion::SamplerPlugin::xmlTypeName));
+    PluginPlacement::insertPlugin(
+        *track, create(tracktion::FourOscPlugin::xmlTypeName));
+    PluginPlacement::insertPlugin(
+        *track, create(tracktion::SamplerPlugin::xmlTypeName));
 
     auto t = types();
     EXPECT_EQ(t[0], internal_plugins::ScaleLockPlugin::xmlTypeName);
@@ -288,7 +289,8 @@ TEST_F(PluginPlacementTest, effectsGoBeforeVolumeAndMeter) {
 
 TEST_F(PluginPlacementTest, midiFxControlsHaveReadableLabels) {
     auto plugin = create(internal_plugins::ArpeggiatorPlugin::xmlTypeName);
-    auto arp = dynamic_cast<internal_plugins::ArpeggiatorPlugin *>(plugin.get());
+    auto arp =
+        dynamic_cast<internal_plugins::ArpeggiatorPlugin *>(plugin.get());
     ASSERT_NE(arp, nullptr);
     EXPECT_EQ(arp->getControls().size(), 5);
     EXPECT_EQ(arp->rate->getCurrentValueAsString(), "1/16");

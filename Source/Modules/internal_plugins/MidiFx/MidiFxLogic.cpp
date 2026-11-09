@@ -63,9 +63,11 @@ int snapToScale(int note, int root, int scaleIndex) {
 
     // nearest scale note; prefer up on a tie
     for (int distance = 1; distance <= 6; distance++) {
-        if (note + distance <= 127 && isInScale(pitchClassOf(note + distance), scale))
+        if (note + distance <= 127 &&
+            isInScale(pitchClassOf(note + distance), scale))
             return note + distance;
-        if (note - distance >= 0 && isInScale(pitchClassOf(note - distance), scale))
+        if (note - distance >= 0 &&
+            isInScale(pitchClassOf(note - distance), scale))
             return note - distance;
     }
     return note;
@@ -83,11 +85,11 @@ struct Chord {
 
 static const std::vector<Chord> &getChords() {
     static const std::vector<Chord> chords{
-        {"Major", {0, 4, 7}},       {"Minor", {0, 3, 7}},
-        {"7", {0, 4, 7, 10}},       {"Maj7", {0, 4, 7, 11}},
-        {"Min7", {0, 3, 7, 10}},    {"Sus2", {0, 2, 7}},
-        {"Sus4", {0, 5, 7}},        {"Dim", {0, 3, 6}},
-        {"Aug", {0, 4, 8}},         {"Add9", {0, 4, 7, 14}},
+        {"Major", {0, 4, 7}},        {"Minor", {0, 3, 7}},
+        {"7", {0, 4, 7, 10}},        {"Maj7", {0, 4, 7, 11}},
+        {"Min7", {0, 3, 7, 10}},     {"Sus2", {0, 2, 7}},
+        {"Sus4", {0, 5, 7}},         {"Dim", {0, 3, 6}},
+        {"Aug", {0, 4, 8}},          {"Add9", {0, 4, 7, 14}},
         {"Min9", {0, 3, 7, 10, 14}}, {"5th", {0, 7}},
         {"Octave", {0, 12}},
     };
@@ -156,7 +158,7 @@ const juce::StringArray &getModeNames() {
 }
 
 const juce::StringArray &getRateNames() {
-    static const juce::StringArray names{"1/4",  "1/8T", "1/8",
+    static const juce::StringArray names{"1/4",   "1/8T", "1/8",
                                          "1/16T", "1/16", "1/32"};
     return names;
 }
@@ -340,13 +342,12 @@ void ArpEngine::process(tracktion::MidiMessageArray &midi,
         if (note < 0)
             break;
 
-        midi.addMidiMessage(juce::MidiMessage::noteOn(midiChannel, note,
-                                                      juce::uint8(velocity)),
-                            juce::jmax(0.0, time),
-                            tracktion::MidiMessageArray::notMPE);
+        midi.addMidiMessage(
+            juce::MidiMessage::noteOn(midiChannel, note, juce::uint8(velocity)),
+            juce::jmax(0.0, time), tracktion::MidiMessageArray::notMPE);
         soundingNote = note;
-        noteOffBeat = stepBeat +
-                      rate * juce::jlimit(0.05, 1.0, settings.gate) - 1.0e-6;
+        noteOffBeat =
+            stepBeat + rate * juce::jlimit(0.05, 1.0, settings.gate) - 1.0e-6;
 
         if (noteOffBeat < blockEndBeat)
             addNoteOff(midi, beatToTime(noteOffBeat));

@@ -33,7 +33,8 @@ void ParameterListModifierViewModel::setParameterValue(int index,
                                          juce::sendNotification);
 }
 
-juce::Range<double> ParameterListModifierViewModel::getParameterRange(int index) {
+juce::Range<double>
+ParameterListModifierViewModel::getParameterRange(int index) {
     if (!juce::isPositiveAndBelow(index, specs.size()))
         return {0.0, 1.0};
 
@@ -117,13 +118,13 @@ createModifierViewModel(tracktion::Modifier *modifier) {
 
     if (auto tracker = dynamic_cast<tracktion::MIDITrackerModifier *>(modifier))
         return std::make_unique<ParameterListModifierViewModel>(
-            modifier, juce::Array<Spec::ParameterSpec>{
-                          Spec::spec("Source", tracker->typeParam),
-                          Spec::spec("Mode", tracker->modeParam),
-                          Spec::spec("Root", tracker->relativeRootParam, 1.0),
-                          Spec::spec("Spread", tracker->relativeSpreadParam,
-                                     1.0),
-                      });
+            modifier,
+            juce::Array<Spec::ParameterSpec>{
+                Spec::spec("Source", tracker->typeParam),
+                Spec::spec("Mode", tracker->modeParam),
+                Spec::spec("Root", tracker->relativeRootParam, 1.0),
+                Spec::spec("Spread", tracker->relativeSpreadParam, 1.0),
+            });
 
     return std::make_unique<ModifierViewModel>(modifier);
 }

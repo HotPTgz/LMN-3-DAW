@@ -85,7 +85,7 @@ juce::Range<double> LFOModifierViewModel::getParameterRange(int index) {
 }
 
 juce::String LFOModifierViewModel::getParameterValueText(int index,
-                                                        double value) {
+                                                         double value) {
     if (index == 0) {
         auto names = tracktion::LFOModifier::getWaveNames();
         int wave = juce::roundToInt(value);

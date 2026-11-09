@@ -53,7 +53,8 @@ juce::Array<RenderJob> planRender(tracktion::Edit &edit, RenderType type,
         // Tracktion's offline renderer ignores track mute, so leave muted
         // audio tracks out of the mix ourselves
         for (int i = 0; i < allTracks.size(); i++) {
-            auto audioTrack = dynamic_cast<tracktion::AudioTrack *>(allTracks[i]);
+            auto audioTrack =
+                dynamic_cast<tracktion::AudioTrack *>(allTracks[i]);
             if (audioTrack == nullptr || !audioTrack->isMuted(true))
                 job.tracksToDo.setBit(i);
         }

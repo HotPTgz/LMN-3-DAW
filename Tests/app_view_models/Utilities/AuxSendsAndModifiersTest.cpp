@@ -29,8 +29,8 @@ TEST_F(AuxSendsTest, firstNudgeCreatesSendAndReturnTrack) {
     ASSERT_NE(fxA, nullptr);
     EXPECT_EQ(fxA->getName(), "FX A");
     EXPECT_TRUE(AuxSends::isReturnTrack(*fxA));
-    EXPECT_EQ(fxA->pluginList.getPluginsOfType<tracktion::ReverbPlugin>().size(),
-              1);
+    EXPECT_EQ(
+        fxA->pluginList.getPluginsOfType<tracktion::ReverbPlugin>().size(), 1);
     EXPECT_FLOAT_EQ(AuxSends::getSendLevel(*track(0), 0), AuxSends::levelStep);
 }
 
@@ -101,9 +101,9 @@ class ModifierViewModelTest : public ::testing::Test {
 TEST_F(ModifierViewModelTest, listContainsAllModifierTypes) {
     ModifierList list(*edit);
     auto ids = list.getModifierIdentifiers();
-    for (auto id : {tracktion::IDs::LFO, tracktion::IDs::STEP,
-                    tracktion::IDs::RANDOM, tracktion::IDs::ENVELOPEFOLLOWER,
-                    tracktion::IDs::MIDITRACKER})
+    for (auto id :
+         {tracktion::IDs::LFO, tracktion::IDs::STEP, tracktion::IDs::RANDOM,
+          tracktion::IDs::ENVELOPEFOLLOWER, tracktion::IDs::MIDITRACKER})
         EXPECT_TRUE(ids.contains(id)) << id.toString();
 }
 
@@ -130,9 +130,9 @@ TEST_F(ModifierViewModelTest, settingValuesIsClampedToRange) {
 }
 
 TEST_F(ModifierViewModelTest, everyModifierTypeGetsKnobs) {
-    for (auto id : {tracktion::IDs::LFO, tracktion::IDs::STEP,
-                    tracktion::IDs::RANDOM, tracktion::IDs::ENVELOPEFOLLOWER,
-                    tracktion::IDs::MIDITRACKER}) {
+    for (auto id :
+         {tracktion::IDs::LFO, tracktion::IDs::STEP, tracktion::IDs::RANDOM,
+          tracktion::IDs::ENVELOPEFOLLOWER, tracktion::IDs::MIDITRACKER}) {
         auto m = add(id);
         auto vm = createModifierViewModel(m.get());
         EXPECT_GT(vm->getNumberOfParameters(), 0) << id.toString();

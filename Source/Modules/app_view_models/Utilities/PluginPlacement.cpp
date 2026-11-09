@@ -24,8 +24,8 @@ void insertPlugin(tracktion::Track &track, tracktion::Plugin::Ptr plugin) {
     int instrumentIndex = findInstrumentIndex(list);
 
     if (internal_plugins::MidiFxPlugin::isMidiFx(*plugin)) {
-        int index = instrumentIndex >= 0 ? instrumentIndex
-                                         : countLeadingMidiFx(list);
+        int index =
+            instrumentIndex >= 0 ? instrumentIndex : countLeadingMidiFx(list);
         list.insertPlugin(plugin, index, nullptr);
         return;
     }

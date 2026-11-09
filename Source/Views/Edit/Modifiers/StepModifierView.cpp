@@ -2,7 +2,8 @@
 
 StepModifierView::StepModifierView(tracktion::StepModifier *mod,
                                    app_services::MidiCommandManager &mcm)
-    : stepModifier(mod), viewModel(app_view_models::createModifierViewModel(mod)),
+    : stepModifier(mod),
+      viewModel(app_view_models::createModifierViewModel(mod)),
       midiCommandManager(mcm) {
     midiCommandManager.addListener(this);
     viewModel->addListener(this);
@@ -97,17 +98,16 @@ void StepModifierView::paint(juce::Graphics &g) {
 void StepModifierView::resized() { repaint(); }
 
 void StepModifierView::nudgeStep(float delta) {
-    float value = juce::jlimit(0.0f, 1.0f,
-                               stepModifier->getStep(selectedStep) + delta);
+    float value =
+        juce::jlimit(0.0f, 1.0f, stepModifier->getStep(selectedStep) + delta);
     stepModifier->setStep(selectedStep, value);
     repaint();
 }
 
 void StepModifierView::nudgeParameter(int index, int direction) {
-    viewModel->setParameterValue(index,
-                                 viewModel->getParameterValue(index) +
-                                     direction *
-                                         viewModel->getParameterInterval(index));
+    viewModel->setParameterValue(
+        index, viewModel->getParameterValue(index) +
+                   direction * viewModel->getParameterInterval(index));
     if (selectedStep >= getNumSteps())
         selectedStep = getNumSteps() - 1;
     repaint();
@@ -139,30 +139,26 @@ void StepModifierView::encoder2Decreased() {
 
 void StepModifierView::encoder3Increased() {
     if (hasFocus())
-        nudgeParameter(midiCommandManager.isControlDown ? stepsIndex
-                                                        : rateIndex,
-                       1);
+        nudgeParameter(
+            midiCommandManager.isControlDown ? stepsIndex : rateIndex, 1);
 }
 
 void StepModifierView::encoder3Decreased() {
     if (hasFocus())
-        nudgeParameter(midiCommandManager.isControlDown ? stepsIndex
-                                                        : rateIndex,
-                       -1);
+        nudgeParameter(
+            midiCommandManager.isControlDown ? stepsIndex : rateIndex, -1);
 }
 
 void StepModifierView::encoder4Increased() {
     if (hasFocus())
-        nudgeParameter(midiCommandManager.isControlDown ? syncIndex
-                                                        : depthIndex,
-                       1);
+        nudgeParameter(
+            midiCommandManager.isControlDown ? syncIndex : depthIndex, 1);
 }
 
 void StepModifierView::encoder4Decreased() {
     if (hasFocus())
-        nudgeParameter(midiCommandManager.isControlDown ? syncIndex
-                                                        : depthIndex,
-                       -1);
+        nudgeParameter(
+            midiCommandManager.isControlDown ? syncIndex : depthIndex, -1);
 }
 
 void StepModifierView::parametersChanged() { repaint(); }

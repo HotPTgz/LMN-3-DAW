@@ -63,8 +63,7 @@ juce::String ParameterListPluginViewModel::getParameterValueText(int index,
     return InternalPluginViewModel::getParameterValueText(index, value);
 }
 
-ParameterListPluginViewModel::ParameterSpec
-ParameterListPluginViewModel::spec(
+ParameterListPluginViewModel::ParameterSpec ParameterListPluginViewModel::spec(
     const juce::String &name, tracktion::AutomatableParameter::Ptr parameter,
     double interval) {
     jassert(parameter != nullptr);

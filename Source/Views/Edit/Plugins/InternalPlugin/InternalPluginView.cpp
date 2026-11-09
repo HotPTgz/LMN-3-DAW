@@ -90,10 +90,12 @@ void InternalPluginView::init() {
                     viewModel->getParameterName(parameterIndex),
                     juce::dontSendNotification);
                 auto &slider = knobs->getKnob(j)->getSlider();
-                slider.setRange(viewModel->getParameterRange(parameterIndex),
-                                viewModel->getParameterInterval(parameterIndex));
+                slider.setRange(
+                    viewModel->getParameterRange(parameterIndex),
+                    viewModel->getParameterInterval(parameterIndex));
                 // show e.g. "+7 st" or "Up/Down" instead of a raw number
-                slider.textFromValueFunction = [this, parameterIndex](double v) {
+                slider.textFromValueFunction = [this,
+                                                parameterIndex](double v) {
                     return viewModel->getParameterValueText(parameterIndex, v);
                 };
                 slider.updateText();

@@ -24,8 +24,7 @@ const juce::StringArray &getSpreadNames();
 // Notes of a chord built on rootNote, clipped to 0-127.
 // inversion 0-3 moves the lowest notes up an octave; spread 1 (open) moves
 // the second-lowest note up an octave.
-juce::Array<int> build(int rootNote, int chordIndex, int inversion,
-                       int spread);
+juce::Array<int> build(int rootNote, int chordIndex, int inversion, int spread);
 } // namespace Chords
 
 //==============================================================================
@@ -72,8 +71,8 @@ class ArpEngine {
         int velocity;
     };
 
-    juce::Array<HeldNote> held;    // in the order they were pressed
-    juce::Array<int> keysDown;     // physical keys still down (for latch)
+    juce::Array<HeldNote> held; // in the order they were pressed
+    juce::Array<int> keysDown;  // physical keys still down (for latch)
     int soundingNote = -1;
     int midiChannel = 1;
     double noteOffBeat = 0.0;

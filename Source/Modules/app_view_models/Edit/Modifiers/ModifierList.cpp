@@ -29,7 +29,8 @@ ModifierList::getModifierListItems() {
     modifiers.add(ModifierListItem(tracktion::IDs::RANDOM, "Random"));
     modifiers.add(
         ModifierListItem(tracktion::IDs::ENVELOPEFOLLOWER, "Envelope"));
-    modifiers.add(ModifierListItem(tracktion::IDs::MIDITRACKER, "MIDI Tracker"));
+    modifiers.add(
+        ModifierListItem(tracktion::IDs::MIDITRACKER, "MIDI Tracker"));
 
     return modifiers;
 }
