@@ -24,6 +24,8 @@ class MixerTrackViewModel : public juce::ValueTree::Listener,
         virtual void volumeChanged(double volume) {}
         virtual void soloStateChanged(bool solo) {}
         virtual void muteStateChanged(bool mute) {}
+        // 0-1 send levels for FX A and FX B
+        virtual void sendLevelsChanged(double sendA, double sendB) {}
     };
 
     void addListener(Listener *l);
@@ -39,11 +41,18 @@ class MixerTrackViewModel : public juce::ValueTree::Listener,
     bool shouldUpdatePan = false;
     bool shouldUpdateMute = false;
     bool shouldUpdateSolo = false;
+    bool shouldUpdateSends = false;
+    void callSendLevelsChanged(Listener &l);
 
     void handleAsyncUpdate() override;
 
     void valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged,
                                   const juce::Identifier &property) override;
+    // sends being added or removed
+    void valueTreeChildAdded(juce::ValueTree &parent,
+                             juce::ValueTree &child) override;
+    void valueTreeChildRemoved(juce::ValueTree &parent, juce::ValueTree &child,
+                               int index) override;
 };
 
 } // namespace app_view_models

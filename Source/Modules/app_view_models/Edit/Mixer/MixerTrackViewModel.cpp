@@ -46,6 +46,14 @@ void MixerTrackViewModel::handleAsyncUpdate() {
     if (compareAndReset(shouldUpdateMute))
         listeners.call(
             [this](Listener &l) { l.muteStateChanged(track->isMuted(false)); });
+
+    if (compareAndReset(shouldUpdateSends))
+        listeners.call([this](Listener &l) { callSendLevelsChanged(l); });
+}
+
+void MixerTrackViewModel::callSendLevelsChanged(Listener &l) {
+    l.sendLevelsChanged(AuxSends::getSendLevel(*track, 0),
+                        AuxSends::getSendLevel(*track, 1));
 }
 
 void MixerTrackViewModel::addListener(Listener *l) {
@@ -55,6 +63,7 @@ void MixerTrackViewModel::addListener(Listener *l) {
     l->panChanged(volumePlugin->getPan());
     l->soloStateChanged(track->isSolo(false));
     l->muteStateChanged(track->isMuted(false));
+    callSendLevelsChanged(*l);
 }
 
 void MixerTrackViewModel::removeListener(Listener *l) { listeners.remove(l); }
@@ -70,6 +79,10 @@ void MixerTrackViewModel::valueTreePropertyChanged(
 
         if (property == tracktion::IDs::pan)
             markAndUpdate(shouldUpdatePan);
+    } else if (treeWhosePropertyHasChanged.hasType(tracktion::IDs::PLUGIN) &&
+               treeWhosePropertyHasChanged[tracktion::IDs::type].toString() ==
+                   tracktion::AuxSendPlugin::xmlTypeName) {
+        markAndUpdate(shouldUpdateSends);
     } else if (treeWhosePropertyHasChanged == track->state) {
         if (property == tracktion::IDs::solo)
             markAndUpdate(shouldUpdateSolo);
@@ -77,5 +90,18 @@ void MixerTrackViewModel::valueTreePropertyChanged(
         if (property == tracktion::IDs::mute)
             markAndUpdate(shouldUpdateMute);
     }
+}
+
+void MixerTrackViewModel::valueTreeChildAdded(juce::ValueTree &parent,
+                                              juce::ValueTree &child) {
+    if (child.hasType(tracktion::IDs::PLUGIN))
+        markAndUpdate(shouldUpdateSends);
+}
+
+void MixerTrackViewModel::valueTreeChildRemoved(juce::ValueTree &parent,
+                                                juce::ValueTree &child,
+                                                int index) {
+    if (child.hasType(tracktion::IDs::PLUGIN))
+        markAndUpdate(shouldUpdateSends);
 }
 } // namespace app_view_models

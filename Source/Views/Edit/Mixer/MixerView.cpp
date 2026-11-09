@@ -55,6 +55,14 @@ void MixerView::encoder1Decreased() {
 
 void MixerView::encoder1ButtonReleased() {}
 
+void MixerView::encoder2Increased() {
+    viewModel.incrementSend(midiCommandManager.isControlDown ? 1 : 0);
+}
+
+void MixerView::encoder2Decreased() {
+    viewModel.decrementSend(midiCommandManager.isControlDown ? 1 : 0);
+}
+
 void MixerView::encoder3Increased() { viewModel.incrementPan(); }
 
 void MixerView::encoder3Decreased() { viewModel.decrementPan(); }

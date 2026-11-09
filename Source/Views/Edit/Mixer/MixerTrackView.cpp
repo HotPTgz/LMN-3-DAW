@@ -29,9 +29,20 @@ MixerTrackView::MixerTrackView(tracktion::Track::Ptr t)
             juce::dontSendNotification);
     }
 
+    else if (!track->isMasterTrack()) {
+        // e.g. the "FX A" / "FX B" return tracks
+        panKnob.getLabel().setText(track->getName(),
+                                   juce::dontSendNotification);
+    }
+
     if (track->isMasterTrack()) {
         panKnob.getLabel().setText("M", juce::dontSendNotification);
     }
+
+    sendsLabel.setJustificationType(juce::Justification::centred);
+    sendsLabel.setColour(juce::Label::textColourId, appLookAndFeel.colour1);
+    sendsLabel.setAlwaysOnTop(true);
+    addChildComponent(sendsLabel);
 
     panKnob.getSlider().setRange(
         viewModel.getVolumeAndPanPlugin()->panParam->getValueRange().getStart(),
@@ -109,6 +120,21 @@ void MixerTrackView::resized() {
     muteLabel.setFont(fontAwesomeFont);
     soloLabel.setBounds(soloX, iconY, iconWidth, iconHeight);
     muteLabel.setBounds(muteX, iconY, iconWidth, iconHeight);
+
+    int sendsHeight = getHeight() / 10;
+    sendsLabel.setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(),
+                                  sendsHeight * .8f, juce::Font::plain));
+    sendsLabel.setBounds(panKnob.getX(), getHeight() - sendsHeight - 2,
+                         panKnob.getWidth(), sendsHeight);
+}
+
+void MixerTrackView::sendLevelsChanged(double sendA, double sendB) {
+    // shown only once a send is in use, e.g. "A40 B0"
+    bool anySend = sendA > 0.0 || sendB > 0.0;
+    sendsLabel.setText("A" + juce::String(juce::roundToInt(sendA * 100)) +
+                           " B" + juce::String(juce::roundToInt(sendB * 100)),
+                       juce::dontSendNotification);
+    sendsLabel.setVisible(anySend);
 }
 
 void MixerTrackView::setSelected(bool selected) {

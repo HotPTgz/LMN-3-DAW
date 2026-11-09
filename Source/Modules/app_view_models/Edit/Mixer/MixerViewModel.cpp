@@ -33,6 +33,18 @@ void MixerViewModel::decrementPan() {
     }
 }
 
+void MixerViewModel::incrementSend(int bus) {
+    if (auto track =
+            dynamic_cast<tracktion::Track *>(listViewModel.getSelectedItem()))
+        AuxSends::nudgeSendLevel(*track, bus, AuxSends::levelStep);
+}
+
+void MixerViewModel::decrementSend(int bus) {
+    if (auto track =
+            dynamic_cast<tracktion::Track *>(listViewModel.getSelectedItem()))
+        AuxSends::nudgeSendLevel(*track, bus, -AuxSends::levelStep);
+}
+
 void MixerViewModel::incrementVolume() {
     if (auto track =
             dynamic_cast<tracktion::Track *>(listViewModel.getSelectedItem())) {

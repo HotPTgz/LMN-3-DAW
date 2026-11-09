@@ -19,6 +19,10 @@ class MixerView : public juce::Component,
     void encoder1Decreased() override;
     void encoder1ButtonReleased() override;
 
+    // aux send level for the selected track: FX A, or FX B with Control
+    void encoder2Increased() override;
+    void encoder2Decreased() override;
+
     void encoder3Increased() override;
     void encoder3Decreased() override;
 

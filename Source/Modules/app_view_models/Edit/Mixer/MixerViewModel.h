@@ -18,6 +18,10 @@ class MixerViewModel {
     void incrementVolume();
     void decrementVolume();
 
+    // Aux send level for the selected track (bus 0 = FX A, 1 = FX B)
+    void incrementSend(int bus);
+    void decrementSend(int bus);
+
     void toggleSolo();
     void toggleMute();
 

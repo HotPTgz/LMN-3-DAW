@@ -24,6 +24,7 @@ class MixerTrackView : public juce::Component,
     void volumeChanged(double volume) override;
     void soloStateChanged(bool solo) override;
     void muteStateChanged(bool mute) override;
+    void sendLevelsChanged(double sendA, double sendB) override;
 
   private:
     tracktion::Track::Ptr track;
@@ -41,6 +42,7 @@ class MixerTrackView : public juce::Component,
     juce::Font fontAwesomeFont = juce::Font(faTypeface);
     juce::Label soloLabel;
     juce::Label muteLabel;
+    juce::Label sendsLabel;
 
     AppLookAndFeel appLookAndFeel;
 

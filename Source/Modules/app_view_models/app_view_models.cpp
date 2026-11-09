@@ -6,6 +6,7 @@
 #include "Utilities/EngineHelpers.cpp"
 #include "Utilities/Quantizer.cpp"
 #include "Utilities/RenderPlanner.cpp"
+#include "Utilities/AuxSends.cpp"
 
 // EditItemList
 #include "Edit/ItemList/ItemListState.cpp"
