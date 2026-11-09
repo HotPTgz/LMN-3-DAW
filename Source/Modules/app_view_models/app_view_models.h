@@ -121,6 +121,7 @@ namespace app_view_models {
 #include "Edit/Modifiers/ModifierPluginDestinationsViewModel.h"
 #include "Edit/Modifiers/ModifierViewModel.h"
 #include "Edit/Modifiers/LFOModifierViewModel.h"
+#include "Edit/Modifiers/ParameterListModifierViewModel.h"
 
 // Tempo
 #include "Edit/Tempo/TempoSettingsViewModel.h"

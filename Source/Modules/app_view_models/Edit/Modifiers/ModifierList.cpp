@@ -23,6 +23,14 @@ ModifierList::getModifierListItems() {
     ModifierListItem lfoItem(tracktion::IDs::LFO, lfoModifier.getName());
     modifiers.add(lfoItem);
 
+    // Display names are fixed rather than read from temporary modifier
+    // instances, since some modifiers start timers when constructed
+    modifiers.add(ModifierListItem(tracktion::IDs::STEP, "Step"));
+    modifiers.add(ModifierListItem(tracktion::IDs::RANDOM, "Random"));
+    modifiers.add(
+        ModifierListItem(tracktion::IDs::ENVELOPEFOLLOWER, "Envelope"));
+    modifiers.add(ModifierListItem(tracktion::IDs::MIDITRACKER, "MIDI Tracker"));
+
     return modifiers;
 }
 } // namespace app_view_models

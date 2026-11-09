@@ -7,6 +7,7 @@ class ModifierViewModel : public juce::ValueTree::Listener,
     ~ModifierViewModel() override;
 
     juce::String getModifierName() { return modifier->getName(); }
+    tracktion::Modifier *getModifier() { return modifier; }
 
     virtual int getNumberOfParameters() { return 0; }
     virtual juce::String getParameterName(int index) {
@@ -18,6 +19,11 @@ class ModifierViewModel : public juce::ValueTree::Listener,
         return juce::Range<double>(0.0, 1.0);
     }
     virtual double getParameterInterval(int index) { return .01; }
+    virtual juce::String getParameterValueText(int index, double value) {
+        if (getParameterInterval(index) >= 1.0)
+            return juce::String(juce::roundToInt(value));
+        return juce::String(value, 2);
+    }
 
     void valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged,
                                   const juce::Identifier &property) override;

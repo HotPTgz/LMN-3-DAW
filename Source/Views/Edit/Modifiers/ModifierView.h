@@ -9,9 +9,9 @@ class ModifierView : public juce::Component,
                      public app_services::MidiCommandManager::Listener,
                      public app_view_models::ModifierViewModel::Listener {
   public:
+    // Works for every modifier type; the view model is chosen by
+    // app_view_models::createModifierViewModel
     ModifierView(tracktion::Modifier *mod,
-                 app_services::MidiCommandManager &mcm);
-    ModifierView(tracktion::LFOModifier *mod,
                  app_services::MidiCommandManager &mcm);
 
     void init();
@@ -47,3 +47,8 @@ class ModifierView : public juce::Component,
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ModifierView)
 };
+
+// Creates the editing screen for a modifier: the step editor for Step
+// modifiers, the knob screen for everything else
+juce::Component *createModifierView(tracktion::Modifier *modifier,
+                                    app_services::MidiCommandManager &mcm);

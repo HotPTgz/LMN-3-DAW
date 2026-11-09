@@ -76,6 +76,7 @@ target_sources(LMN-3  PRIVATE
     Source/Views/Edit/Modifiers/ModifierPluginDestinationsListView.cpp
     Source/Views/Edit/Modifiers/AvailablePluginParametersListView.cpp
     Source/Views/Edit/Modifiers/ModifierView.cpp
+    Source/Views/Edit/Modifiers/StepModifierView.cpp
     Source/Views/Edit/Tracks/InformationPanelComponent.cpp
     Source/Views/Edit/Tracks/Markers/PlayheadComponent.cpp
     Source/Views/Edit/Tracks/Markers/LoopMarkerComponent.cpp

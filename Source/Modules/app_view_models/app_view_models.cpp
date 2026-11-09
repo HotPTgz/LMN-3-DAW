@@ -50,6 +50,7 @@
 #include "Edit/Modifiers/ModifierPluginDestinationsViewModel.cpp"
 #include "Edit/Modifiers/ModifierViewModel.cpp"
 #include "Edit/Modifiers/LFOModifierViewModel.cpp"
+#include "Edit/Modifiers/ParameterListModifierViewModel.cpp"
 
 // Tempo
 #include "Edit/Tempo/TempoSettingsViewModel.cpp"

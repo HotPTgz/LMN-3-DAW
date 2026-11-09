@@ -1,19 +1,20 @@
 #include "ModifierView.h"
+#include "StepModifierView.h"
 #include <app_navigation/app_navigation.h>
 
 ModifierView::ModifierView(tracktion::Modifier *mod,
                            app_services::MidiCommandManager &mcm)
-    : viewModel(std::make_unique<app_view_models::ModifierViewModel>(mod)),
-      midiCommandManager(mcm), knobs(mcm, 8) {
+    : viewModel(app_view_models::createModifierViewModel(mod)),
+      midiCommandManager(mcm),
+      knobs(mcm, juce::jmax(1, viewModel->getNumberOfParameters())) {
     init();
 }
 
-ModifierView::ModifierView(tracktion::LFOModifier *mod,
-                           app_services::MidiCommandManager &mcm)
-    : viewModel(std::unique_ptr<app_view_models::ModifierViewModel>(
-          std::make_unique<app_view_models::LFOModifierViewModel>(mod))),
-      midiCommandManager(mcm), knobs(mcm, 5) {
-    init();
+juce::Component *createModifierView(tracktion::Modifier *modifier,
+                                    app_services::MidiCommandManager &mcm) {
+    if (auto step = dynamic_cast<tracktion::StepModifier *>(modifier))
+        return new StepModifierView(step, mcm);
+    return new ModifierView(modifier, mcm);
 }
 
 void ModifierView::init() {
@@ -27,9 +28,14 @@ void ModifierView::init() {
     for (int i = 0; i < viewModel->getNumberOfParameters(); i++) {
         knobs.getKnob(i)->getLabel().setText(viewModel->getParameterName(i),
                                              juce::dontSendNotification);
-        knobs.getKnob(i)->getSlider().setRange(
-            viewModel->getParameterRange(i),
-            viewModel->getParameterInterval(i));
+        auto &slider = knobs.getKnob(i)->getSlider();
+        slider.setRange(viewModel->getParameterRange(i),
+                        viewModel->getParameterInterval(i));
+        // show e.g. "1/16" or "Transport" instead of a raw number
+        slider.textFromValueFunction = [this, i](double value) {
+            return viewModel->getParameterValueText(i, value);
+        };
+        slider.updateText();
     }
 
     addAndMakeVisible(knobs);

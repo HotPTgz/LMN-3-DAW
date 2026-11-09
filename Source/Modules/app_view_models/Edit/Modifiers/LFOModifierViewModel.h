@@ -12,6 +12,7 @@ class LFOModifierViewModel : public app_view_models::ModifierViewModel {
 
     juce::Range<double> getParameterRange(int index) override;
     double getParameterInterval(int index) override;
+    juce::String getParameterValueText(int index, double value) override;
 
   private:
     tracktion::LFOModifier *lfoModifier;

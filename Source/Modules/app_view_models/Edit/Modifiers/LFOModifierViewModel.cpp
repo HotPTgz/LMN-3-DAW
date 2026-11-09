@@ -84,6 +84,17 @@ juce::Range<double> LFOModifierViewModel::getParameterRange(int index) {
     }
 }
 
+juce::String LFOModifierViewModel::getParameterValueText(int index,
+                                                        double value) {
+    if (index == 0) {
+        auto names = tracktion::LFOModifier::getWaveNames();
+        int wave = juce::roundToInt(value);
+        if (juce::isPositiveAndBelow(wave, names.size()))
+            return names[wave];
+    }
+    return ModifierViewModel::getParameterValueText(index, value);
+}
+
 double LFOModifierViewModel::getParameterInterval(int index) {
     switch (index) {
     case 0:
