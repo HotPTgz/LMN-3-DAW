@@ -21,7 +21,7 @@ juce::String getBaseName(tracktion::Edit &edit, RenderType type,
 
 /**
  * Works out the files to render.
- *  - mix:   one file containing every track
+ *  - mix:   one file containing every track that isn't muted
  *  - stems: one file per audio track that has clips and isn't muted, inside
  *           a "<project>_stems_<timestamp>" folder, named "01_<track>.wav"
  */

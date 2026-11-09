@@ -45,17 +45,21 @@ void StepModifierView::paint(juce::Graphics &g) {
     g.drawText("Step", area.removeFromTop(int(getHeight() * .1f)),
                juce::Justification::centred);
 
-    // settings line
-    auto info = area.removeFromBottom(int(getHeight() * .12f));
+    // two lines of settings under the bars
+    auto info = area.removeFromBottom(int(getHeight() * .2f));
     auto text = [this](int index) {
         return viewModel->getParameterValueText(
             index, viewModel->getParameterValue(index));
     };
+    auto lineHeight = info.getHeight() / 2;
     g.drawText("Step " + juce::String(selectedStep + 1) + ": " +
-                   juce::String(stepModifier->getStep(selectedStep), 2) +
-                   "   Rate " + text(rateIndex) + "   Depth " +
-                   text(depthIndex) + "   Sync " + text(syncIndex),
+                   juce::String(stepModifier->getStep(selectedStep), 2),
+               info.removeFromTop(lineHeight), juce::Justification::centred);
+    g.drawText("Rate " + text(rateIndex) + "  Depth " +
+                   juce::String(viewModel->getParameterValue(depthIndex), 2) +
+                   "  Sync " + text(syncIndex),
                info, juce::Justification::centred);
+    area.removeFromBottom(int(getHeight() * .03f)); // room for beat marks
 
     // bars
     int numSteps = getNumSteps();

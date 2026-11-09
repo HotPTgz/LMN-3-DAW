@@ -47,6 +47,16 @@ TEST_F(RenderPlannerTest, mixRendersAllTracksIntoOneNamedFile) {
               tracktion::getAllTracks(*edit).size());
 }
 
+TEST_F(RenderPlannerTest, mixLeavesOutMutedTracks) {
+    tracktion::getAudioTracks(*edit)[1]->setMute(true);
+    auto jobs = app_view_models::RenderPlanner::planRender(
+        *edit, RenderType::mix, rendersDirectory, time);
+    ASSERT_EQ(jobs.size(), 1);
+    EXPECT_TRUE(jobs[0].tracksToDo[indexInAllTracks(0)]);
+    EXPECT_FALSE(jobs[0].tracksToDo[indexInAllTracks(1)]);
+    EXPECT_TRUE(jobs[0].tracksToDo[indexInAllTracks(2)]);
+}
+
 TEST_F(RenderPlannerTest, stemsSkipEmptyAndMutedTracks) {
     addClip(0);
     addClip(2);
