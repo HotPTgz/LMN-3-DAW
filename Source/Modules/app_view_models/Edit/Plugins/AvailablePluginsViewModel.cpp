@@ -158,25 +158,8 @@ tracktion::Plugin *AvailablePluginsViewModel::addSelectedPluginToTrack() {
             }
         }
 
-        if (!pluginExistsInListAlready) {
-            if (pluginToAdd->isSynth()) {
-                // first we need to check if there is currently a synth on the
-                // track
-                if (track->pluginList.size() > 0 &&
-                    track->pluginList.getPlugins()[0]->isSynth())
-                    track->pluginList.getPlugins()
-                        .getFirst()
-                        ->removeFromParent();
-
-                track->pluginList.insertPlugin(pluginToAdd, 0, nullptr);
-
-            } else {
-                // always insert effects before the volume and level plugins
-                // (the 2 default plugins on every track)
-                track->pluginList.insertPlugin(
-                    pluginToAdd, track->pluginList.size() - 2, nullptr);
-            }
-        }
+        if (!pluginExistsInListAlready)
+            PluginPlacement::insertPlugin(*track, pluginToAdd);
 
         return pluginToAdd;
     }

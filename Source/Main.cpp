@@ -44,6 +44,21 @@ class GuiAppApplication : public juce::JUCEApplication {
         // we need to add the app internal plugins to the cache:
         engine.getPluginManager()
             .createBuiltInType<internal_plugins::DrumSamplerPlugin>();
+        engine.getPluginManager()
+            .createBuiltInType<internal_plugins::ArpeggiatorPlugin>();
+        engine.getPluginManager()
+            .createBuiltInType<internal_plugins::ScaleLockPlugin>();
+        engine.getPluginManager()
+            .createBuiltInType<internal_plugins::ChordPlugin>();
+
+        // Tracktion can process a plugin in 128-sample sub-blocks when it has
+        // automation or modulation, but MIDI that a plugin outputs from later
+        // sub-blocks loses its time offset. The MIDI FX create notes, so keep
+        // them on whole blocks to keep their timing exact.
+        engine.getPluginManager().canUseFineGrainAutomation =
+            [](tracktion::Plugin &p) {
+                return !internal_plugins::MidiFxPlugin::isMidiFx(p);
+            };
 
         auto userAppDataDirectory = juce::File::getSpecialLocation(
             juce::File::userApplicationDataDirectory);

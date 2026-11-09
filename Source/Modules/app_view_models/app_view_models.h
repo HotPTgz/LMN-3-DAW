@@ -77,6 +77,7 @@ namespace app_view_models {
 #include "Utilities/Quantizer.h"
 #include "Utilities/RenderPlanner.h"
 #include "Utilities/AuxSends.h"
+#include "Utilities/PluginPlacement.h"
 
 // ItemList
 #include "Edit/ItemList/ItemListState.h"

@@ -110,6 +110,17 @@ class ExtendedUIBehaviour : public tracktion::UIBehaviour {
                 return internalPluginView;
             }
 
+            if (auto midiFx = dynamic_cast<internal_plugins::MidiFxPlugin *>(
+                    &(ws->plugin))) {
+                using VM = app_view_models::ParameterListPluginViewModel;
+                juce::Array<VM::ParameterSpec> specs;
+                for (auto &control : midiFx->getControls())
+                    specs.add(VM::spec(control.parameter->getParameterName(),
+                                       control.parameter, control.interval));
+                return std::make_unique<InternalPluginView>(
+                    std::make_unique<VM>(midiFx, specs), *midiCommandManager);
+            }
+
             if (auto pitchShiftPlugin =
                     dynamic_cast<tracktion::PitchShiftPlugin *>(
                         &(ws->plugin))) {

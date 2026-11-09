@@ -7,6 +7,7 @@
 #include "Utilities/Quantizer.cpp"
 #include "Utilities/RenderPlanner.cpp"
 #include "Utilities/AuxSends.cpp"
+#include "Utilities/PluginPlacement.cpp"
 
 // EditItemList
 #include "Edit/ItemList/ItemListState.cpp"

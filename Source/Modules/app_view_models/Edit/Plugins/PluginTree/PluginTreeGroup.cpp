@@ -18,14 +18,17 @@ PluginTreeGroup::PluginTreeGroup(tracktion::Edit &e)
         // Add instruments and effects group
         auto instrumentsFolder = new PluginTreeGroup(edit, "Instruments");
         auto effectsFolder = new PluginTreeGroup(edit, "Effects");
+        auto midiFxFolder = new PluginTreeGroup(edit, "MIDI FX");
         // Populate the built in plugins
         // num is used to provide a unique identifier for the built in plugins
         int num = 1;
         // auto builtinFolder = new PluginTreeGroup(edit, "Builtin Plugins");
         addSubItem(instrumentsFolder);
         addSubItem(effectsFolder);
+        addSubItem(midiFxFolder);
         instrumentsFolder->populateBuiltInInstruments(num);
         effectsFolder->populateBuiltInEffects(num);
+        midiFxFolder->populateBuiltInMidiFx(num);
 
         instrumentsFolder->populateExternalInstruments(list);
         effectsFolder->populateExternalEffects(list);
@@ -90,6 +93,12 @@ void PluginTreeGroup::populateBuiltInEffects(int &num) {
     //        num); addInternalPlugin<tracktion::TextPlugin>(*this, num);
     //        addInternalPlugin<tracktion::FreezePointPlugin>(*this,
     //        num);
+}
+
+void PluginTreeGroup::populateBuiltInMidiFx(int &num) {
+    addInternalPlugin<internal_plugins::ArpeggiatorPlugin>(*this, num);
+    addInternalPlugin<internal_plugins::ScaleLockPlugin>(*this, num);
+    addInternalPlugin<internal_plugins::ChordPlugin>(*this, num);
 }
 
 void PluginTreeGroup::scanForPlugins() const {

@@ -23,6 +23,7 @@ class PluginTreeGroup : public PluginTreeBase {
 
     void populateBuiltInInstruments(int &num);
     void populateBuiltInEffects(int &num);
+    void populateBuiltInMidiFx(int &num);
 
     JUCE_LEAK_DETECTOR(PluginTreeGroup)
 };

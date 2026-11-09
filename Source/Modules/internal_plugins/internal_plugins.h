@@ -16,6 +16,10 @@
 namespace internal_plugins {
 
     class DrumSamplerPlugin;
+    class MidiFxPlugin;
+    class ArpeggiatorPlugin;
+    class ScaleLockPlugin;
+    class ChordPlugin;
 
 }
 
@@ -25,8 +29,13 @@ namespace internal_plugins {
 #include <juce_graphics/juce_graphics.h>
 #include <tracktion_engine/tracktion_engine.h>
 #include <functional>
+#include <array>
+#include <vector>
+#include <algorithm>
 
 #include "DrumSamplerPlugin/DrumSamplerPlugin.h"
+#include "MidiFx/MidiFxLogic.h"
+#include "MidiFx/MidiFxPlugins.h"
 
 
 
