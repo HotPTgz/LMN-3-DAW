@@ -29,6 +29,10 @@ class InternalPluginView
                        app_services::MidiCommandManager &mcm);
     InternalPluginView(tracktion::CompressorPlugin *p,
                        app_services::MidiCommandManager &mcm);
+    // Use a specific view model (e.g. ParameterListPluginViewModel)
+    InternalPluginView(
+        std::unique_ptr<app_view_models::InternalPluginViewModel> vm,
+        app_services::MidiCommandManager &mcm);
 
     void init();
 

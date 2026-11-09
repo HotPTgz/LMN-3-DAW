@@ -17,6 +17,11 @@ class InternalPluginViewModel : public juce::ValueTree::Listener,
         return juce::Range<double>(0.0, 1.0);
     }
     virtual double getParameterInterval(int index) { return .01; }
+    virtual juce::String getParameterValueText(int index, double value) {
+        if (getParameterInterval(index) >= 1.0)
+            return juce::String(juce::roundToInt(value));
+        return juce::String(value, 2);
+    }
 
     void valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged,
                                   const juce::Identifier &property) override;

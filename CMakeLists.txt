@@ -128,6 +128,7 @@ target_include_directories(LMN-3  PUBLIC
 
 target_compile_definitions(LMN-3  PRIVATE
     JUCE_MODAL_LOOPS_PERMITTED=1 # For Tracktion Engine
+    TRACKTION_ENABLE_TIMESTRETCH_SOUNDTOUCH=1 # Needed by the Pitch Shift effect
     JUCE_PLUGINHOST_VST3=1
     JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_gui_app` call
     JUCE_USE_CURL=0     # If you remove this, add `NEEDS_CURL TRUE` to the `juce_add_gui_app` call

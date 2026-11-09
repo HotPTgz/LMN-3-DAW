@@ -110,6 +110,18 @@ class ExtendedUIBehaviour : public tracktion::UIBehaviour {
                 return internalPluginView;
             }
 
+            if (auto pitchShiftPlugin =
+                    dynamic_cast<tracktion::PitchShiftPlugin *>(
+                        &(ws->plugin))) {
+                using VM = app_view_models::ParameterListPluginViewModel;
+                return std::make_unique<InternalPluginView>(
+                    std::make_unique<VM>(
+                        pitchShiftPlugin,
+                        juce::Array<VM::ParameterSpec>{VM::spec(
+                            "Semitones", pitchShiftPlugin->semitones, 1.0)}),
+                    *midiCommandManager);
+            }
+
             if (auto fourOscPlugin =
                     dynamic_cast<tracktion::FourOscPlugin *>(&(ws->plugin))) {
                 std::unique_ptr<FourOscView> fourOscView =

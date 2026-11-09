@@ -78,7 +78,8 @@ void PluginTreeGroup::populateBuiltInEffects(int &num) {
     addInternalPlugin<tracktion::PhaserPlugin>(*this, num);
     addInternalPlugin<tracktion::CompressorPlugin>(*this, num, false,
                                                    "Compressor");
-    //        addInternalPlugin<tracktion::PitchShiftPlugin>(*this, num);
+    addInternalPlugin<tracktion::PitchShiftPlugin>(*this, num, false,
+                                                   "Pitch Shift");
     addInternalPlugin<tracktion::LowPassPlugin>(*this, num, false, "LPF/HPF");
     //        addInternalPlugin<tracktion::MidiModifierPlugin>(*this,
     //        num);

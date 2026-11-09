@@ -63,6 +63,14 @@ InternalPluginView::InternalPluginView(tracktion::CompressorPlugin *p,
     init();
 }
 
+InternalPluginView::InternalPluginView(
+    std::unique_ptr<app_view_models::InternalPluginViewModel> vm,
+    app_services::MidiCommandManager &mcm)
+    : TabbedComponent(juce::TabbedButtonBar::Orientation::TabsAtTop),
+      viewModel(std::move(vm)), midiCommandManager(mcm) {
+    init();
+}
+
 void InternalPluginView::init() {
     titleLabel.setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(),
                                   getHeight() * .1, juce::Font::plain));
@@ -81,9 +89,14 @@ void InternalPluginView::init() {
                 knobs->getKnob(j)->getLabel().setText(
                     viewModel->getParameterName(parameterIndex),
                     juce::dontSendNotification);
-                knobs->getKnob(j)->getSlider().setRange(
-                    viewModel->getParameterRange(parameterIndex),
-                    viewModel->getParameterInterval(parameterIndex));
+                auto &slider = knobs->getKnob(j)->getSlider();
+                slider.setRange(viewModel->getParameterRange(parameterIndex),
+                                viewModel->getParameterInterval(parameterIndex));
+                // show e.g. "+7 st" or "Up/Down" instead of a raw number
+                slider.textFromValueFunction = [this, parameterIndex](double v) {
+                    return viewModel->getParameterValueText(parameterIndex, v);
+                };
+                slider.updateText();
             }
         }
     }

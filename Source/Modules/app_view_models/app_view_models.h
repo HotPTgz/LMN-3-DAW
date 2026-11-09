@@ -102,6 +102,7 @@ namespace app_view_models {
 #include "Edit/Plugins/Sampler/SynthSamplerViewModel.h"
 #include "Edit/Plugins/Sampler/DrumSamplerViewModel.h"
 #include "Edit/Plugins/InternalPluginViewModel.h"
+#include "Edit/Plugins/ParameterListPluginViewModel.h"
 #include "Edit/Plugins/ReverbPluginViewModel.h"
 #include "Edit/Plugins/DelayPluginViewModel.h"
 #include "Edit/Plugins/LowPassPluginViewModel.h"

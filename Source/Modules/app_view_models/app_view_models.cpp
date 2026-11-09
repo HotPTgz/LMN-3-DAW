@@ -30,6 +30,7 @@
 #include "Edit/Plugins/Sampler/SynthSamplerViewModel.cpp"
 #include "Edit/Plugins/Sampler/DrumSamplerViewModel.cpp"
 #include "Edit/Plugins/InternalPluginViewModel.cpp"
+#include "Edit/Plugins/ParameterListPluginViewModel.cpp"
 #include "Edit/Plugins/ReverbPluginViewModel.cpp"
 #include "Edit/Plugins/DelayPluginViewModel.cpp"
 #include "Edit/Plugins/LowPassPluginViewModel.cpp"
