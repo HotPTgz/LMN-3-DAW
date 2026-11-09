@@ -38,6 +38,8 @@ target_sources(Tests PRIVATE
         app_view_models/Utilities/QuantizerTest.cpp
         app_view_models/Utilities/RenderPlannerTest.cpp
         app_services/ProjectManagerTest.cpp
+        app_view_models/Utilities/MidiFxTest.cpp
+        app_view_models/Utilities/AuxSendsAndModifiersTest.cpp
 )
 
 target_compile_definitions(Tests PRIVATE

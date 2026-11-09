@@ -49,8 +49,13 @@ double ParameterListModifierViewModel::getParameterInterval(int index) {
 
 juce::String
 ParameterListModifierViewModel::getParameterValueText(int index, double value) {
-    if (juce::isPositiveAndBelow(index, specs.size()))
-        return specs[index].parameter->valueToString(float(value));
+    if (juce::isPositiveAndBelow(index, specs.size())) {
+        auto parameter = specs[index].parameter;
+        // choice parameters (rate, sync type ...) have text labels
+        if (parameter->hasLabels())
+            return parameter->getLabelForValue(float(value));
+        return parameter->valueToString(float(value));
+    }
     return ModifierViewModel::getParameterValueText(index, value);
 }
 
@@ -126,29 +131,35 @@ createModifierViewModel(tracktion::Modifier *modifier) {
 void applyModifierDefaults(tracktion::Modifier *modifier) {
     using namespace tracktion::ModifierCommon;
 
+    // Set through the parameters so their current values update straight
+    // away (setting the CachedValues only updates them asynchronously)
+    auto set = [](tracktion::AutomatableParameter::Ptr &p, float value) {
+        p->setParameter(value, juce::sendNotification);
+    };
+
     if (auto lfo = dynamic_cast<tracktion::LFOModifier *>(modifier)) {
         lfo->wave.setValue(1, nullptr);
     } else if (auto step = dynamic_cast<tracktion::StepModifier *>(modifier)) {
-        step->syncType.setValue(float(transport), nullptr);
-        step->rateType.setValue(float(sixteenth), nullptr);
-        step->numSteps.setValue(16.0f, nullptr);
-        step->depth.setValue(0.5f, nullptr);
+        set(step->syncTypeParam, float(transport));
+        set(step->rateTypeParam, float(sixteenth));
+        set(step->numStepsParam, 16.0f);
+        set(step->depthParam, 0.5f);
         // start with a simple rising pattern so the effect is audible
         for (int i = 0; i < 16; i++)
             step->setStep(i, float(i % 4) / 3.0f);
     } else if (auto random =
                    dynamic_cast<tracktion::RandomModifier *>(modifier)) {
-        random->syncType.setValue(float(transport), nullptr);
-        random->rateType.setValue(float(eighth), nullptr);
-        random->depth.setValue(0.5f, nullptr);
+        set(random->syncTypeParam, float(transport));
+        set(random->rateTypeParam, float(eighth));
+        set(random->depthParam, 0.5f);
     } else if (auto envelope =
                    dynamic_cast<tracktion::EnvelopeFollowerModifier *>(
                        modifier)) {
-        envelope->depth.setValue(0.5f, nullptr);
+        set(envelope->depthParam, 0.5f);
     } else if (auto tracker =
                    dynamic_cast<tracktion::MIDITrackerModifier *>(modifier)) {
-        tracker->mode.setValue(float(tracktion::MIDITrackerModifier::relative),
-                               nullptr);
+        set(tracker->modeParam,
+            float(tracktion::MIDITrackerModifier::relative));
     }
 }
 

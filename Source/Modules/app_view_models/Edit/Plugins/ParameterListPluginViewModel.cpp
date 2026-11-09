@@ -54,8 +54,12 @@ double ParameterListPluginViewModel::getParameterInterval(int index) {
 
 juce::String ParameterListPluginViewModel::getParameterValueText(int index,
                                                                  double value) {
-    if (juce::isPositiveAndBelow(index, specs.size()))
-        return specs[index].parameter->valueToString(float(value));
+    if (juce::isPositiveAndBelow(index, specs.size())) {
+        auto parameter = specs[index].parameter;
+        if (parameter->hasLabels())
+            return parameter->getLabelForValue(float(value));
+        return parameter->valueToString(float(value));
+    }
     return InternalPluginViewModel::getParameterValueText(index, value);
 }
 

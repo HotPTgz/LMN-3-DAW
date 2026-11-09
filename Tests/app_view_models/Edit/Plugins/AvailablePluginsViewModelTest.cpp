@@ -31,7 +31,7 @@ TEST_F(AvailablePluginsViewModelTest, initialSelectedPluginIndex) {
 }
 
 TEST_F(AvailablePluginsViewModelTest, setSelectedCategoryIndex) {
-    // should only be 2 categories, effects and instruments
+    // should only be 3 categories: instruments, effects and MIDI FX
     viewModel.setSelectedCategoryIndex(-1);
     EXPECT_EQ(viewModel.getSelectedCategoryIndex(), 0);
     viewModel.setSelectedCategoryIndex(-2);
@@ -43,9 +43,11 @@ TEST_F(AvailablePluginsViewModelTest, setSelectedCategoryIndex) {
     viewModel.setSelectedCategoryIndex(1);
     EXPECT_EQ(viewModel.getSelectedCategoryIndex(), 1);
     viewModel.setSelectedCategoryIndex(2);
-    EXPECT_EQ(viewModel.getSelectedCategoryIndex(), 1);
+    EXPECT_EQ(viewModel.getSelectedCategoryIndex(), 2);
+    viewModel.setSelectedCategoryIndex(3);
+    EXPECT_EQ(viewModel.getSelectedCategoryIndex(), 2);
     viewModel.setSelectedCategoryIndex(100);
-    EXPECT_EQ(viewModel.getSelectedCategoryIndex(), 1);
+    EXPECT_EQ(viewModel.getSelectedCategoryIndex(), 2);
 }
 
 TEST_F(AvailablePluginsViewModelTest, setSelectedPluginIndexInstruments) {
@@ -100,12 +102,13 @@ TEST_F(AvailablePluginsViewModelTest, setSelectedPluginIndexEffects) {
     EXPECT_EQ(viewModel.getSelectedPluginIndex(), 2);
     viewModel.setSelectedPluginIndex(6);
     EXPECT_EQ(viewModel.getSelectedPluginIndex(), 6);
+    // 8 built-in effects now that Pitch Shift is included
     viewModel.setSelectedPluginIndex(7);
-    EXPECT_EQ(viewModel.getSelectedPluginIndex(), 6);
+    EXPECT_EQ(viewModel.getSelectedPluginIndex(), 7);
     viewModel.setSelectedPluginIndex(8);
-    EXPECT_EQ(viewModel.getSelectedPluginIndex(), 6);
+    EXPECT_EQ(viewModel.getSelectedPluginIndex(), 7);
     viewModel.setSelectedPluginIndex(100);
-    EXPECT_EQ(viewModel.getSelectedPluginIndex(), 6);
+    EXPECT_EQ(viewModel.getSelectedPluginIndex(), 7);
 }
 
 TEST_F(AvailablePluginsViewModelTest, getSelectedCategory) {
@@ -148,6 +151,9 @@ TEST_F(AvailablePluginsViewModelTest, selectedCategoryIndexChanges) {
     EXPECT_CALL(listener, selectedPluginIndexChanged(0)).Times(1);
 
     EXPECT_CALL(listener, selectedCategoryIndexChanged(1)).Times(1);
+
+    // the MIDI FX category
+    EXPECT_CALL(listener, selectedCategoryIndexChanged(2)).Times(1);
 
     viewModel.addListener(&listener);
 
