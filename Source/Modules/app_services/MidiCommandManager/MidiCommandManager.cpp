@@ -270,6 +270,18 @@ void MidiCommandManager::midiMessageReceived(const juce::MidiMessage &message,
                     listener->stopButtonReleased();
             }
 
+            // Holding Control + Stop starts the power-off countdown;
+            // letting go of either button cancels it
+            if (message.getControllerValue() == 127 && isControlDown) {
+                isPowerOffHoldActive = true;
+                listeners.call([](Listener &l) { l.powerOffHoldStarted(); });
+            }
+
+            if (message.getControllerValue() == 0 && isPowerOffHoldActive) {
+                isPowerOffHoldActive = false;
+                listeners.call([](Listener &l) { l.powerOffHoldCancelled(); });
+            }
+
             break;
 
         case SEQUENCERS_BUTTON:
@@ -327,6 +339,12 @@ void MidiCommandManager::midiMessageReceived(const juce::MidiMessage &message,
             if (message.getControllerValue() == 0) {
                 isControlDown = false;
                 listeners.call([](Listener &l) { l.controlButtonReleased(); });
+
+                if (isPowerOffHoldActive) {
+                    isPowerOffHoldActive = false;
+                    listeners.call(
+                        [](Listener &l) { l.powerOffHoldCancelled(); });
+                }
             }
 
             break;

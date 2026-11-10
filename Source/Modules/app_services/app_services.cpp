@@ -8,3 +8,6 @@
 #include "TimelineCamera/TimelineCamera.cpp"
 // ProjectManager
 #include "ProjectManager/ProjectManager.cpp"
+
+// PowerControl
+#include "PowerControl/PowerControl.cpp"

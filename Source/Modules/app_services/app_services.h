@@ -39,3 +39,6 @@ namespace app_services {
 
 // ProjectManager
 #include "ProjectManager/ProjectManager.h"
+
+// PowerControl
+#include "PowerControl/PowerControl.h"

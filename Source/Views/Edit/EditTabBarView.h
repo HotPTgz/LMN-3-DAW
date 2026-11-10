@@ -35,6 +35,10 @@ class EditTabBarView : public juce::TabbedComponent,
     // MidiCommandManager Listener
     void octaveChanged(int newOctave) override;
 
+    // Hold Control + Stop for 3 seconds to save and power off
+    void powerOffHoldStarted() override;
+    void powerOffHoldCancelled() override;
+
     // Used to reset the modifiers list when ever a plugin gets deleted
     void resetModifiersTab();
 
@@ -61,6 +65,16 @@ class EditTabBarView : public juce::TabbedComponent,
     OctaveDisplayComponent octaveDisplayComponent;
     MessageBox messageBox;
     RenderMenuComponent renderMenu;
+
+    // Counts down while Control + Stop are held
+    struct PowerOffCountdown : public juce::Timer {
+        std::function<void()> onTick;
+        void timerCallback() override { onTick(); }
+    };
+    PowerOffCountdown powerOffCountdown;
+    int powerOffSecondsLeft = 0;
+    static constexpr int powerOffHoldSeconds = 3;
+    void saveAndPowerOff();
 
     void timerCallback() override;
     void resetTrackRelatedTabs();

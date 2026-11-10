@@ -11,6 +11,7 @@ class MidiCommandManager : private juce::MidiInputCallback {
     bool isControlDown = false;
     bool isPlusDown = false;
     bool isMinusDown = false;
+    bool isPowerOffHoldActive = false;
     void midiMessageReceived(const juce::MidiMessage &message,
                              const juce::String &source);
 
@@ -133,6 +134,11 @@ class MidiCommandManager : private juce::MidiInputCallback {
         virtual void undoButtonReleased() {}
 
         virtual void octaveChanged(int newOctave) {}
+
+        // Control + Stop held down (power-off gesture). Sent to every
+        // listener, not just the focused component.
+        virtual void powerOffHoldStarted() {}
+        virtual void powerOffHoldCancelled() {}
     };
 
     void addListener(Listener *l);

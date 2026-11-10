@@ -161,6 +161,52 @@ void EditTabBarView::saveButtonReleased() {
     }
 }
 
+void EditTabBarView::powerOffHoldStarted() {
+    powerOffSecondsLeft = powerOffHoldSeconds;
+    stopTimer(); // keep the message box up during the countdown
+    messageBox.setMessage("Power off in " + juce::String(powerOffSecondsLeft));
+    resized();
+    messageBox.setVisible(true);
+
+    powerOffCountdown.onTick = [this]() {
+        powerOffSecondsLeft--;
+        if (powerOffSecondsLeft > 0) {
+            messageBox.setMessage("Power off in " +
+                                  juce::String(powerOffSecondsLeft));
+            resized();
+        } else {
+            powerOffCountdown.stopTimer();
+            saveAndPowerOff();
+        }
+    };
+    powerOffCountdown.startTimer(1000);
+}
+
+void EditTabBarView::powerOffHoldCancelled() {
+    if (powerOffCountdown.isTimerRunning()) {
+        powerOffCountdown.stopTimer();
+        showMessage("Power off cancelled");
+    }
+}
+
+void EditTabBarView::saveAndPowerOff() {
+    juce::Logger::writeToLog("Saving before power off ...");
+    edit.getTransport().stop(false, false);
+    tracktion::EditFileOperations(edit).save(true, true, false);
+
+    stopTimer();
+    messageBox.setMessage("Saved. Shutting down...");
+    resized();
+    messageBox.setVisible(true);
+
+    // let the message appear before the shutdown starts
+    juce::Component::SafePointer<EditTabBarView> safeThis(this);
+    juce::Timer::callAfterDelay(500, [safeThis]() {
+        if (!app_services::PowerControl::powerOff() && safeThis != nullptr)
+            safeThis->showMessage("Power off failed", 2000);
+    });
+}
+
 void EditTabBarView::renderButtonReleased() {
     if (isShowing()) {
         // Control + Save toggles the render menu
