@@ -59,10 +59,28 @@ std::unique_ptr<PlayfulScene> ampEnvelope(Getter attack, Getter decay,
 // type: 0 off, 1 low-pass, 2 high-pass, 3 band-pass, 4 notch
 std::unique_ptr<PlayfulScene> oscFilter(Getter frequencyHz, Getter resonance01,
                                         Getter envAmount01, IntGetter type);
-// shows one scene per page of a paged screen, with a title for each
+// shows one scene per page of a paged screen, with a title for each and
+// optional tabs (page names) drawn at the top right
 std::unique_ptr<PlayfulScene>
 paged(std::vector<std::unique_ptr<PlayfulScene>> scenes,
-      juce::StringArray titles);
+      juce::StringArray titles, juce::StringArray tabs = {});
+
+// Built-in engines. Knob positions are 0-1 unless noted.
+// String: decay in seconds
+std::unique_ptr<PlayfulScene> stringEngine(Getter decaySeconds,
+                                           Getter brightness, Getter pickPos,
+                                           Getter body);
+// FM: algorithm 0-7, ratios as multiples of the note
+std::unique_ptr<PlayfulScene> fmEngine(IntGetter algorithm, Getter ratio2,
+                                       Getter amount, Getter feedback,
+                                       Getter ratio3, Getter ratio4);
+// Pulse: PWM rate in Hz
+std::unique_ptr<PlayfulScene> pulseEngine(Getter width, Getter pwmDepth,
+                                          Getter pwmRateHz, Getter sub);
+// The Shape page shared by the engines (knob positions)
+std::unique_ptr<PlayfulScene> engineShape(Getter attack, Getter decay,
+                                          Getter sustain, Getter release,
+                                          Getter cutoff, IntGetter voices);
 
 // any other plugin or modifier
 std::unique_ptr<PlayfulScene> generic(TextGetter subtitle);

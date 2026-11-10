@@ -316,6 +316,52 @@ createFourOscScreen(tracktion::FourOscPlugin *plugin,
                   S::paged(std::move(scenes), titles), vms);
 }
 
+// Built-in engines: SOUND page (engine's own 8 knobs) and SHAPE page
+std::unique_ptr<juce::Component>
+createEngineScreen(internal_plugins::EnginePlugin *engine,
+                   app_services::MidiCommandManager &mcm) {
+    namespace S = PlayfulScenes;
+    using VM = app_view_models::ParameterListPluginViewModel;
+    juce::Array<VM::ParameterSpec> specs;
+    for (auto &control : engine->getControls())
+        specs.add(VM::spec(control.parameter->getParameterName(),
+                           control.parameter, control.interval));
+    auto vm = std::make_shared<VM>(engine, specs);
+    auto params = paramsFrom(vm.get());
+
+    auto sound = [engine](int i) {
+        return [engine, i] { return engine->getSoundValue(i); };
+    };
+    auto knob = [engine](int i) {
+        return [engine, i] {
+            return engine->getControls()[8 + i].parameter->getCurrentValue();
+        };
+    };
+
+    std::unique_ptr<PlayfulScene> soundScene;
+    if (dynamic_cast<internal_plugins::StringEnginePlugin *>(engine))
+        soundScene = S::stringEngine(sound(0), sound(1), sound(2), sound(3));
+    else if (dynamic_cast<internal_plugins::FmEnginePlugin *>(engine))
+        soundScene = S::fmEngine(
+            [engine] { return juce::roundToInt(engine->getSoundValue(0)); },
+            sound(1), sound(2), sound(3), sound(4), sound(5));
+    else
+        soundScene = S::pulseEngine(sound(0), sound(1), sound(2), sound(3));
+
+    std::vector<std::unique_ptr<PlayfulScene>> scenes;
+    scenes.push_back(std::move(soundScene));
+    scenes.push_back(
+        S::engineShape(knob(0), knob(1), knob(2), knob(3), knob(4), [engine] {
+            return juce::roundToInt(
+                engine->getControls()[15].parameter->getCurrentValue());
+        }));
+
+    auto name = engine->getName();
+    return screen(mcm, name, std::move(params),
+                  S::paged(std::move(scenes), {name, name}, {"SOUND", "SHAPE"}),
+                  vm);
+}
+
 } // namespace
 
 //==============================================================================
@@ -517,6 +563,9 @@ createPlayfulPluginView(tracktion::Plugin *plugin,
 
     if (auto fourOsc = dynamic_cast<tracktion::FourOscPlugin *>(plugin))
         return createFourOscScreen(fourOsc, mcm);
+
+    if (auto engine = dynamic_cast<internal_plugins::EnginePlugin *>(plugin))
+        return createEngineScreen(engine, mcm);
 
     using namespace internal_plugins;
     if (auto arp = dynamic_cast<ArpeggiatorPlugin *>(plugin)) {

@@ -51,10 +51,11 @@ TEST_F(AvailablePluginsViewModelTest, setSelectedCategoryIndex) {
 }
 
 TEST_F(AvailablePluginsViewModelTest, setSelectedPluginIndexInstruments) {
-    // For instruments there should only be 3
+    // For instruments there should only be 6
     // 40SC
     // Sampler
     // DrumSampler
+    // String, FM, Pulse
     // (VST3 get scanned asynchronously so they wont be present for the test)
     viewModel.setSelectedPluginIndex(-1);
     EXPECT_EQ(viewModel.getSelectedPluginIndex(), 0);
@@ -69,9 +70,9 @@ TEST_F(AvailablePluginsViewModelTest, setSelectedPluginIndexInstruments) {
     viewModel.setSelectedPluginIndex(2);
     EXPECT_EQ(viewModel.getSelectedPluginIndex(), 2);
     viewModel.setSelectedPluginIndex(3);
-    EXPECT_EQ(viewModel.getSelectedPluginIndex(), 2);
+    EXPECT_EQ(viewModel.getSelectedPluginIndex(), 3);
     viewModel.setSelectedPluginIndex(100);
-    EXPECT_EQ(viewModel.getSelectedPluginIndex(), 2);
+    EXPECT_EQ(viewModel.getSelectedPluginIndex(), 5);
 }
 
 TEST_F(AvailablePluginsViewModelTest, setSelectedPluginIndexEffects) {
@@ -193,6 +194,9 @@ TEST_F(AvailablePluginsViewModelTest, selectedPluginIndexChanges) {
     EXPECT_CALL(listener, selectedPluginIndexChanged(1)).Times(1);
 
     EXPECT_CALL(listener, selectedPluginIndexChanged(2)).Times(1);
+
+    // 100 is clamped to the last instrument
+    EXPECT_CALL(listener, selectedPluginIndexChanged(5)).Times(1);
 
     viewModel.addListener(&listener);
 

@@ -4,3 +4,5 @@
 #include "DrumSamplerPlugin/DrumSamplerPlugin.cpp"
 #include "MidiFx/MidiFxLogic.cpp"
 #include "MidiFx/MidiFxPlugins.cpp"
+#include "Engines/EngineDsp.cpp"
+#include "Engines/EnginePlugins.cpp"

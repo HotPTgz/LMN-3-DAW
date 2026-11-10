@@ -68,6 +68,9 @@ void PluginTreeGroup::populateBuiltInInstruments(int &num) {
     addInternalPlugin<tracktion::FourOscPlugin>(*this, num, true);
     addInternalPlugin<tracktion::SamplerPlugin>(*this, num, true);
     addInternalPlugin<internal_plugins::DrumSamplerPlugin>(*this, num, true);
+    addInternalPlugin<internal_plugins::StringEnginePlugin>(*this, num, true);
+    addInternalPlugin<internal_plugins::FmEnginePlugin>(*this, num, true);
+    addInternalPlugin<internal_plugins::PulseEnginePlugin>(*this, num, true);
 }
 
 void PluginTreeGroup::populateBuiltInEffects(int &num) {

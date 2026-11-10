@@ -1,4 +1,5 @@
 #include "PlayfulScenes.h"
+#include <internal_plugins/internal_plugins.h>
 
 using namespace Playful;
 using juce::AffineTransform;
@@ -1826,8 +1827,8 @@ std::unique_ptr<PlayfulScene> oscFilter(Getter frequencyHz, Getter resonance01,
 class PagedScene : public PlayfulScene {
   public:
     PagedScene(std::vector<std::unique_ptr<PlayfulScene>> s,
-               juce::StringArray t)
-        : scenes(std::move(s)), titles(t) {}
+               juce::StringArray t, juce::StringArray tb)
+        : scenes(std::move(s)), titles(t), tabs(tb) {}
 
     PlayfulScene *current() {
         if (scenes.empty())
@@ -1841,24 +1842,461 @@ class PagedScene : public PlayfulScene {
         return current() != nullptr ? current()->getSubtitle() : String();
     }
     void notePlayed(int note) override {
-        if (current() != nullptr)
-            current()->notePlayed(note);
+        for (auto &scene : scenes)
+            scene->notePlayed(note);
     }
     void paint(Graphics &g, double t) override {
         if (current() != nullptr)
             current()->paint(g, t);
+        // page tabs
+        float x = 560;
+        for (int i = 0; i < tabs.size(); i++) {
+            float w = 18.0f + tabs[i].length() * 8.0f;
+            bool active = i == page;
+            g.setColour(active ? Colours::yellow : Colours::panel);
+            g.fillRoundedRectangle(x, 6, w, 26, 13);
+            g.setColour(active ? Colours::ink : Colours::muted);
+            g.setFont(font(12, true));
+            g.drawText(tabs[i], juce::Rectangle<float>(x, 6, w, 26),
+                       juce::Justification::centred);
+            x += w + 8;
+        }
     }
 
   private:
     std::vector<std::unique_ptr<PlayfulScene>> scenes;
-    juce::StringArray titles;
+    juce::StringArray titles, tabs;
     int page = 0;
 };
 
 std::unique_ptr<PlayfulScene>
 paged(std::vector<std::unique_ptr<PlayfulScene>> scenes,
-      juce::StringArray titles) {
-    return std::make_unique<PagedScene>(std::move(scenes), titles);
+      juce::StringArray titles, juce::StringArray tabs) {
+    return std::make_unique<PagedScene>(std::move(scenes), titles, tabs);
+}
+
+} // namespace PlayfulScenes
+
+namespace PlayfulScenes {
+
+//==============================================================================
+// String engine: a cat plucks a long string
+class StringEngineScene : public PlayfulScene {
+  public:
+    StringEngineScene(Getter d, Getter b, Getter p, Getter bo)
+        : decay(d), brightness(b), pickPos(p), body(bo) {}
+    String getSubtitle() override { return "plucked"; }
+    void notePlayed(int) override { pluckRequested = true; }
+
+    void paint(Graphics &g, double t) override {
+        float dec = juce::jmax(0.1f, decay());
+        float bright = juce::jlimit(0.0f, 1.0f, brightness());
+        float pos = juce::jlimit(0.05f, 0.95f, pickPos());
+        float bo = juce::jlimit(0.0f, 1.0f, body());
+
+        // pluck on every note, and by itself every few seconds
+        if (pluckRequested || t - lastPluck > juce::jmax(3.0, double(dec)) ||
+            t < lastPluck) {
+            lastPluck = t;
+            pluckRequested = false;
+        }
+        double since = t - lastPluck;
+        float ring = std::pow(10.0f, -3.0f * float(since) / dec);
+        float amp = (30.0f + bo * 40.0f) * ring;
+        float wobble =
+            std::cos(float(since) * juce::MathConstants<float>::twoPi * 5.0f);
+
+        g.setColour(Colours::orange);
+        g.fillRoundedRectangle(60, 150, 20, 44, 8);
+        g.fillRoundedRectangle(720, 150, 20, 44, 8);
+
+        auto shapeAt = [&](float u) {
+            float tri = u < pos ? u / pos : (1 - u) / (1 - pos);
+            return std::sin(u * juce::MathConstants<float>::pi) * tri * 1.3f;
+        };
+        Path lens, line;
+        for (int i = 0; i <= 80; i++) {
+            float u = i / 80.0f, x = 80 + u * 640;
+            if (i == 0)
+                lens.startNewSubPath(x, 172 - amp * shapeAt(u));
+            else
+                lens.lineTo(x, 172 - amp * shapeAt(u));
+        }
+        for (int i = 80; i >= 0; i--) {
+            float u = i / 80.0f;
+            lens.lineTo(80 + u * 640, 172 + amp * shapeAt(u));
+        }
+        lens.closeSubPath();
+        g.setColour(Colours::green.withAlpha(0.28f));
+        g.fillPath(lens);
+        for (int i = 0; i <= 80; i++) {
+            float u = i / 80.0f, x = 80 + u * 640;
+            float y = 172 - amp * wobble * shapeAt(u);
+            if (i == 0)
+                line.startNewSubPath(x, y);
+            else
+                line.lineTo(x, y);
+        }
+        g.setColour(Colours::cream);
+        strokePath(g, line, 4);
+
+        // sparkles for brightness
+        int sparks = juce::roundToInt(bright * 8);
+        for (int s = 0; s < sparks; s++) {
+            float sx = 120.0f + float((s * 97) % 560);
+            float sy = 110.0f + float((s * 53) % 40) + (s % 2 ? 110.0f : 0.0f);
+            float tw = pingPong(t + s * 0.3, 2.4);
+            g.setColour(Colours::yellow.withAlpha(0.3f + 0.7f * tw));
+            g.fillPath(
+                svg("M0 -7 L2 -2 L7 0 L2 2 L0 7 L-2 2 L-7 0 L-2 -2 Z"),
+                AffineTransform::scale(0.7f + 0.3f * tw).translated(sx, sy));
+        }
+
+        // the cat, dipping its paw on each pluck
+        float dip = since < 0.12 ? 10.0f * float(1.0 - since / 0.12) : 0.0f;
+        {
+            Graphics::ScopedSaveState state(g);
+            g.addTransform(
+                AffineTransform::translation(80 + pos * 640, 172 + dip));
+            g.setColour(Colours::text);
+            g.fillPath(
+                svg("M-26 -118 Q-30 -72 -14 -40 L14 -40 Q30 -72 26 -118 Z"));
+            g.fillPath(svg("M-26 -118 L-30 -140 L-12 -124 Z M26 -118 L30 -140 "
+                           "L12 -124 Z"));
+            drawFace(g, 0, -100, 0.7f, Mood::smile, t);
+            fillEllipseCentred(g, 0, -30, 13, 11);
+            g.setColour(Colours::pink);
+            fillEllipseCentred(g, -5, -26, 2.5f, 2.5f);
+            fillEllipseCentred(g, 5, -26, 2.5f, 2.5f);
+            fillEllipseCentred(g, 0, -21, 3, 3);
+        }
+        text(g, "rings for " + String(dec, 1) + " s", 24, 316, 13,
+             Colours::muted);
+    }
+
+  private:
+    Getter decay, brightness, pickPos, body;
+    double lastPluck = -100.0;
+    bool pluckRequested = false;
+};
+
+std::unique_ptr<PlayfulScene> stringEngine(Getter decaySeconds,
+                                           Getter brightness, Getter pickPos,
+                                           Getter body) {
+    return std::make_unique<StringEngineScene>(decaySeconds, brightness,
+                                               pickPos, body);
+}
+
+//==============================================================================
+// FM engine: an octopus juggles the four operators
+class FmEngineScene : public PlayfulScene {
+  public:
+    FmEngineScene(IntGetter al, Getter r2, Getter am, Getter fb, Getter r3,
+                  Getter r4)
+        : algorithm(al), ratio2(r2), amount(am), feedback(fb), ratio3(r3),
+          ratio4(r4) {}
+
+    String getSubtitle() override {
+        auto &a = currentAlgorithm();
+        return String(int(a.carriers.size())) + " audible";
+    }
+
+    void paint(Graphics &g, double t) override {
+        auto &a = currentAlgorithm();
+        float am = juce::jlimit(0.0f, 1.0f, amount());
+        float fb = juce::jlimit(0.0f, 1.0f, feedback());
+
+        // depth of each operator: carriers at the bottom
+        int depth[5] = {0, 0, 0, 0, 0};
+        for (int pass = 0; pass < 4; pass++)
+            for (auto &link : a.links)
+                depth[link.first] =
+                    juce::jmax(depth[link.first], depth[link.second] + 1);
+        for (int c : a.carriers)
+            depth[c] = 0;
+        juce::Point<float> pos[5];
+        for (int level = 0; level < 4; level++) {
+            juce::Array<int> ops;
+            for (int o = 1; o <= 4; o++)
+                if (depth[o] == level)
+                    ops.add(o);
+            for (int i = 0; i < ops.size(); i++)
+                pos[ops[i]] = {400.0f + (float(i) - (ops.size() - 1) / 2.0f) *
+                                            120.0f,
+                               198.0f - level * 50.0f};
+        }
+
+        g.setColour(Colours::cream.withAlpha(0.9f));
+        for (auto &link : a.links) {
+            auto s = pos[link.first], e = pos[link.second];
+            Path p;
+            p.startNewSubPath(s.x, s.y + 22);
+            p.quadraticTo((s.x + e.x) / 2, (s.y + e.y) / 2, e.x, e.y - 24);
+            strokeDashed(g, p, 2 + am * 6, 2, 8);
+        }
+        if (fb > 0.02f) {
+            auto top = pos[4];
+            Path loop;
+            loop.startNewSubPath(top.x + 20, top.y - 14);
+            loop.cubicTo(top.x + 56, top.y - 44, top.x - 56, top.y - 44,
+                         top.x - 20, top.y - 14);
+            g.setColour(Colours::red);
+            strokePath(g, loop, 2 + fb * 6);
+        }
+
+        const juce::Colour cols[5] = {Colours::ink, Colours::yellow,
+                                      Colours::green, Colours::blue,
+                                      Colours::purple};
+        float ratios[5] = {0, 1.0f, ratio2(), ratio3(), ratio4()};
+        for (int o = 1; o <= 4; o++) {
+            bool carrier = std::find(a.carriers.begin(), a.carriers.end(), o) !=
+                           a.carriers.end();
+            float r = carrier ? 26.0f : 22.0f;
+            float y = pos[o].y + floatY(t, o * 0.4) * 0.8f;
+            g.setColour(cols[o]);
+            fillEllipseCentred(g, pos[o].x, y, r, r);
+            g.setColour(Colours::white.withAlpha(0.5f));
+            fillEllipseCentred(g, pos[o].x - 8, y - 9, 5, 5);
+            float ratio = ratios[o];
+            text(g, "x" + String(ratio, ratio == std::floor(ratio) ? 0 : 1),
+                 pos[o].x, y + 6, 15, Colours::ink, true,
+                 juce::Justification::horizontallyCentred);
+        }
+
+        {
+            Graphics::ScopedSaveState s(g);
+            g.addTransform(AffineTransform::translation(400, 300 + floatY(t)));
+            g.setColour(Colours::pink);
+            for (int k = 0; k < 6; k++) {
+                float ax = -50.0f + k * 20;
+                float sway = 4.0f * std::sin(float(t) * 3.0f + k);
+                Path arm;
+                arm.startNewSubPath(ax, -6);
+                arm.quadraticTo(ax + (k < 3 ? -30.0f : 30.0f), 10 + sway,
+                                ax + (k < 3 ? -20.0f : 20.0f), 26);
+                strokePath(g, arm, 12);
+            }
+            fillEllipseCentred(g, 0, -30, 58, 46);
+            drawFace(g, 0, -34, 1, Mood::sing, t);
+        }
+
+        g.setColour(Colours::panel);
+        g.fillRoundedRectangle(600, 70, 170, 60, 20);
+        text(g, "algorithm " + String(juce::jlimit(0, 7, algorithm()) + 1), 685,
+             97, 12, Colours::muted, false,
+             juce::Justification::horizontallyCentred);
+        text(g, a.name, 685, 118, 17, Colours::text, true,
+             juce::Justification::horizontallyCentred);
+    }
+
+  private:
+    IntGetter algorithm;
+    Getter ratio2, amount, feedback, ratio3, ratio4;
+
+    const internal_plugins::engines::FmSound::Algorithm &currentAlgorithm() {
+        auto &all = internal_plugins::engines::FmSound::getAlgorithms();
+        return all[size_t(juce::jlimit(0, 7, algorithm()))];
+    }
+};
+
+std::unique_ptr<PlayfulScene> fmEngine(IntGetter algorithm, Getter ratio2,
+                                       Getter amount, Getter feedback,
+                                       Getter ratio3, Getter ratio4) {
+    return std::make_unique<FmEngineScene>(algorithm, ratio2, amount, feedback,
+                                           ratio3, ratio4);
+}
+
+//==============================================================================
+// Pulse engine: a dinosaur stomps on the pulse wave
+class PulseEngineScene : public PlayfulScene {
+  public:
+    PulseEngineScene(Getter w, Getter d, Getter r, Getter s)
+        : width(w), depth(d), rate(r), sub(s) {}
+    String getSubtitle() override { return "square-ish"; }
+
+    void paint(Graphics &g, double t) override {
+        float dp = juce::jlimit(0.0f, 1.0f, depth());
+        float rt = juce::jmax(0.05f, rate());
+        float sb = juce::jlimit(0.0f, 1.0f, sub());
+        // the same width wobble the sound has, slowed down to be visible
+        float w = juce::jlimit(
+            0.05f, 0.95f,
+            width() +
+                dp * 0.45f *
+                    std::sin(float(t) * juce::MathConstants<float>::twoPi *
+                             juce::jmin(rt, 2.0f)));
+
+        const float hi = 150, lo = 240, period = 160;
+        Path wave;
+        wave.startNewSubPath(0, lo);
+        for (int c = 0; c < 6; c++) {
+            float x0 = c * period, hw = period * w;
+            wave.lineTo(x0, lo);
+            wave.lineTo(x0, hi);
+            wave.lineTo(x0 + hw, hi);
+            wave.lineTo(x0 + hw, lo);
+        }
+        wave.lineTo(800, lo);
+        wave.lineTo(800, 328);
+        wave.lineTo(0, 328);
+        wave.closeSubPath();
+        g.setColour(Colours::panel);
+        g.fillPath(wave);
+        g.setColour(Colours::blue);
+        g.strokePath(wave,
+                     juce::PathStrokeType(5, juce::PathStrokeType::curved));
+
+        static const Path dino = svg(
+            "M-40 0 Q-46 -40 -10 -50 L10 -50 Q24 -78 50 -70 Q66 -62 58 -46 Q50 "
+            "-36 34 -40 Q30 -10 22 0 Z");
+        static const Path tail =
+            svg("M-40 -6 Q-70 -14 -78 -34 Q-60 -22 -40 -22 Z");
+        float stomp = -12.0f * pingPong(t, 0.6);
+        {
+            Graphics::ScopedSaveState s(g);
+            g.addTransform(AffineTransform::translation(
+                2 * period + period * w / 2, hi + stomp));
+            g.setColour(Colours::green);
+            g.fillPath(dino);
+            g.fillPath(tail);
+            g.fillRoundedRectangle(-30, -4, 14, 14, 6);
+            g.fillRoundedRectangle(4, -4, 14, 14, 6);
+            g.setColour(Colours::yellow);
+            g.fillPath(svg("M-6 -50 L0 -62 L6 -50 Z M8 -52 L14 -64 L20 -52 Z"));
+            drawFace(g, 42, -56, 0.5f, Mood::smile, t);
+        }
+        if (sb > 0.01f) {
+            Graphics::ScopedSaveState s(g);
+            g.addTransform(
+                AffineTransform::scale(0.5f + sb * 0.2f)
+                    .translated(520, 300 - 12.0f * pingPong(t, 1.2)));
+            Fade fade(g, {-60, -90, 140, 100}, 0.25f + sb * 0.75f);
+            g.setColour(Colours::orange);
+            g.fillPath(dino);
+            drawFace(g, 42, -56, 0.5f, Mood::smile, t + 1);
+        }
+        text(g, "sub: one octave down", 24, 316, 13, Colours::muted);
+    }
+
+  private:
+    Getter width, depth, rate, sub;
+};
+
+std::unique_ptr<PlayfulScene> pulseEngine(Getter width, Getter pwmDepth,
+                                          Getter pwmRateHz, Getter sub) {
+    return std::make_unique<PulseEngineScene>(width, pwmDepth, pwmRateHz, sub);
+}
+
+//==============================================================================
+// Engine Shape page: penguin on the envelope, owl on the filter card
+class EngineShapeScene : public PlayfulScene {
+  public:
+    EngineShapeScene(Getter a, Getter d, Getter s, Getter r, Getter c,
+                     IntGetter v)
+        : attack(a), decay(d), sustain(s), release(r), cutoff(c), voices(v) {}
+    String getSubtitle() override { return "shape"; }
+
+    void paint(Graphics &g, double t) override {
+        float at = juce::jlimit(0.0f, 1.0f, attack());
+        float de = juce::jlimit(0.0f, 1.0f, decay());
+        float su = juce::jlimit(0.0f, 1.0f, sustain());
+        float re = juce::jlimit(0.0f, 1.0f, release());
+        float cu = juce::jlimit(0.0f, 1.0f, cutoff());
+
+        const float base = 290, top = 70, x0 = 30;
+        float x1 = x0 + 30 + at * 110, x2 = x1 + 30 + de * 110, x3 = x2 + 90;
+        float x4 = juce::jmin(530.0f, x3 + 30 + re * 140);
+        float ys = base - (base - top) * su;
+
+        Path route;
+        route.startNewSubPath(x0, base);
+        route.lineTo(x1, top);
+        route.lineTo(x2, ys);
+        route.lineTo(x3, ys);
+        route.lineTo(x4, base);
+        Path hill(route);
+        hill.closeSubPath();
+        g.setColour(Colours::panel);
+        g.fillPath(hill);
+        auto segment = [&](float ax, float ay, float bx, float by,
+                           juce::Colour c) {
+            Path p;
+            p.startNewSubPath(ax, ay);
+            p.lineTo(bx, by);
+            g.setColour(c);
+            strokePath(g, p, 8);
+        };
+        segment(x0, base, x1, top, Colours::blue);
+        segment(x1, top, x2, ys, Colours::green);
+        segment(x2, ys, x3, ys, Colours::cream);
+        segment(x3, ys, x4, base, Colours::red);
+
+        double duration = 2 + at * 2 + de * 2 + re * 2;
+        auto p = route.getPointAlongPath(route.getLength() * loop(t, duration));
+        {
+            Graphics::ScopedSaveState s(g);
+            g.addTransform(AffineTransform::translation(p.x, p.y - 26));
+            g.setColour(Colours::ink);
+            fillEllipseCentred(g, 0, 0, 20, 24);
+            g.setColour(Colours::text);
+            g.drawEllipse(-20, -24, 40, 48, 2);
+            fillEllipseCentred(g, 0, 6, 13, 16);
+            g.setColour(Colours::orange);
+            g.fillPath(svg("M-5 -2 L5 -2 L0 5 Z"));
+            g.setColour(Colours::text);
+            float open =
+                frac(t / 4.2) > 0.92 && frac(t / 4.2) < 0.98 ? 0.15f : 1.0f;
+            fillEllipseCentred(g, -5.4f, -10, 2, 2.7f * open);
+            fillEllipseCentred(g, 5.4f, -10, 2, 2.7f * open);
+            g.setColour(Colours::pink);
+            strokePath(g, svg("M-22 24 L22 24"), 5);
+        }
+
+        // filter card (Control)
+        Graphics::ScopedSaveState s(g);
+        g.addTransform(AffineTransform::translation(560, 120));
+        g.setColour(Colours::panel);
+        g.fillRoundedRectangle(0, 0, 210, 150, 24);
+        text(g, "FILTER (CTRL)", 18, 28, 12, Colours::muted);
+        float cx = 20 + cu * 170;
+        Path curve;
+        for (int i = 0; i <= 34; i++) {
+            float x = 20.0f + i * 5;
+            float u = (x - cx) / 20;
+            float y = (x < cx ? 70.0f : 70.0f + juce::jmin(1.0f, u) * 40.0f) -
+                      12.0f * std::exp(-u * u * 3);
+            if (i == 0)
+                curve.startNewSubPath(x, y);
+            else
+                curve.lineTo(x, y);
+        }
+        g.setColour(Colours::blue);
+        strokePath(g, curve, 4);
+        float owlY = 58 + floatY(t) * 0.4f;
+        g.setColour(Colours::purple);
+        fillEllipseCentred(g, cx, owlY - 12, 12, 13);
+        g.setColour(Colours::cream);
+        fillEllipseCentred(g, cx - 5, owlY - 15, 4.5f, 4.5f);
+        fillEllipseCentred(g, cx + 5, owlY - 15, 4.5f, 4.5f);
+        g.setColour(Colours::ink);
+        fillEllipseCentred(g, cx - 5, owlY - 15, 2.2f, 2.2f);
+        fillEllipseCentred(g, cx + 5, owlY - 15, 2.2f, 2.2f);
+        text(g,
+             formatFrequency(internal_plugins::engines::cutoffHz(cu)) +
+                 utf8(" · ") + String(voices()) + " voices",
+             18, 136, 14, Colours::text);
+    }
+
+  private:
+    Getter attack, decay, sustain, release, cutoff;
+    IntGetter voices;
+};
+
+std::unique_ptr<PlayfulScene> engineShape(Getter attack, Getter decay,
+                                          Getter sustain, Getter release,
+                                          Getter cutoff, IntGetter voices) {
+    return std::make_unique<EngineShapeScene>(attack, decay, sustain, release,
+                                              cutoff, voices);
 }
 
 } // namespace PlayfulScenes

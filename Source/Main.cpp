@@ -50,6 +50,12 @@ class GuiAppApplication : public juce::JUCEApplication {
             .createBuiltInType<internal_plugins::ScaleLockPlugin>();
         engine.getPluginManager()
             .createBuiltInType<internal_plugins::ChordPlugin>();
+        engine.getPluginManager()
+            .createBuiltInType<internal_plugins::StringEnginePlugin>();
+        engine.getPluginManager()
+            .createBuiltInType<internal_plugins::FmEnginePlugin>();
+        engine.getPluginManager()
+            .createBuiltInType<internal_plugins::PulseEnginePlugin>();
 
         // Tracktion can process a plugin in 128-sample sub-blocks when it has
         // automation or modulation, but MIDI that a plugin outputs from later
