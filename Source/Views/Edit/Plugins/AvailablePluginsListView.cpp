@@ -101,18 +101,14 @@ void AvailablePluginsListView::encoder2ButtonReleased() {
                         midiCommandManager, plugin,
                         plugin->windowState->pluginWindow.get()));
 
-                    if (auto fourOsc =
-                            dynamic_cast<tracktion::FourOscPlugin *>(plugin)) {
-                        // four osc view has a tab component
-                        if (auto fourOscView = dynamic_cast<FourOscView *>(
-                                plugin->windowState->pluginWindow.get()))
-                            midiCommandManager.setFocusedComponent(
-                                fourOscView->getCurrentContentComponent());
-
-                    } else {
+                    // the classic four osc view has a tab component; the
+                    // playful screens take the focus themselves
+                    auto *window = plugin->windowState->pluginWindow.get();
+                    if (auto fourOscView = dynamic_cast<FourOscView *>(window))
                         midiCommandManager.setFocusedComponent(
-                            plugin->windowState->pluginWindow.get());
-                    }
+                            fourOscView->getCurrentContentComponent());
+                    else
+                        midiCommandManager.setFocusedComponent(window);
                 }
             }
         }
