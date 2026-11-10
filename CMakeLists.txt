@@ -77,6 +77,11 @@ target_sources(LMN-3  PRIVATE
     Source/Views/Edit/Modifiers/AvailablePluginParametersListView.cpp
     Source/Views/Edit/Modifiers/ModifierView.cpp
     Source/Views/Edit/Modifiers/StepModifierView.cpp
+    Source/Views/Playful/PlayfulStyle.cpp
+    Source/Views/Playful/PlayfulParamScreen.cpp
+    Source/Views/Playful/PlayfulScenes.cpp
+    Source/Views/Playful/PlayfulFactory.cpp
+    Source/Views/Playful/PlayfulSamplerView.cpp
     Source/Views/Edit/Tracks/InformationPanelComponent.cpp
     Source/Views/Edit/Tracks/Markers/PlayheadComponent.cpp
     Source/Views/Edit/Tracks/Markers/LoopMarkerComponent.cpp
@@ -123,6 +128,7 @@ target_include_directories(LMN-3  PUBLIC
     Source/Views/Edit/Sequencers
     Source/Views/Edit/Sequencers/StepSequencer
     Source/Views/Edit/Mixer
+    Source/Views/Playful
     Source/Views/Utilities
 )
 
@@ -146,6 +152,8 @@ juce_add_binary_data(FontData HEADER_NAME FontData.h NAMESPACE FontData SOURCES
     FontAwesome/FontAwesome6BrandsRegular400.otf
     FontAwesome/FontAwesome6FreeSolid900.otf
     FontAwesome/FontAwesome6FreeRegular400.otf
+    Assets/Fonts/Fredoka-Regular.ttf
+    Assets/Fonts/Fredoka-SemiBold.ttf
 )
 
 # If at some point samples are ever built directly into the application, they will need to be added below

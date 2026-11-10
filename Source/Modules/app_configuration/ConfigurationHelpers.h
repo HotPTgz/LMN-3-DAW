@@ -14,6 +14,8 @@ class ConfigurationHelpers {
     static void initSamples(tracktion::Engine &engine);
     static bool getShowTitleBar(juce::File &configFile);
     static double getWidth(juce::File &configFile);
+    // config: animations: false turns off the playful screen animations
+    static bool getAnimations(juce::File &configFile);
     static double getHeight(juce::File &configFile);
 
   private:

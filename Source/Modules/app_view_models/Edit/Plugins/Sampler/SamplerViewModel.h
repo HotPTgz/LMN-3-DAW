@@ -47,6 +47,9 @@ class SamplerViewModel : public juce::ChangeListener,
 
     virtual juce::String getSelectedItemName();
 
+    // the sound being edited (the drum pad; always 0 for the synth sampler)
+    int getSelectedSoundIndex() { return selectedSoundIndex.get(); }
+
     void changeListenerCallback(juce::ChangeBroadcaster *source) override;
 
     void valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged,

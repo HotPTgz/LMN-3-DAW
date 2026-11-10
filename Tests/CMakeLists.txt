@@ -40,6 +40,7 @@ target_sources(Tests PRIVATE
         app_services/ProjectManagerTest.cpp
         app_view_models/Utilities/MidiFxTest.cpp
         app_view_models/Utilities/AuxSendsAndModifiersTest.cpp
+        app_configuration/AnimationsConfigTest.cpp
 )
 
 target_compile_definitions(Tests PRIVATE

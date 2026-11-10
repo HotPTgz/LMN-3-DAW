@@ -1,4 +1,5 @@
 #include "ModifierView.h"
+#include "PlayfulFactory.h"
 #include "StepModifierView.h"
 #include <app_navigation/app_navigation.h>
 
@@ -14,6 +15,8 @@ juce::Component *createModifierView(tracktion::Modifier *modifier,
                                     app_services::MidiCommandManager &mcm) {
     if (auto step = dynamic_cast<tracktion::StepModifier *>(modifier))
         return new StepModifierView(step, mcm);
+    if (auto playful = createPlayfulModifierView(modifier, mcm))
+        return playful.release();
     return new ModifierView(modifier, mcm);
 }
 

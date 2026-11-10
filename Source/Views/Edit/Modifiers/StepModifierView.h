@@ -1,5 +1,5 @@
 #pragma once
-#include "AppLookAndFeel.h"
+#include "PlayfulParamScreen.h"
 #include <app_services/app_services.h>
 #include <app_view_models/app_view_models.h>
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -9,17 +9,14 @@
 //   encoder 2: step value (hold Control for fine steps)
 //   encoder 3: rate (1/4, 1/8, 1/16 ...)   Control + encoder 3: number of steps
 //   encoder 4: depth                        Control + encoder 4: sync type
-class StepModifierView : public juce::Component,
+// Drawn as a row of candy jars with a hamster hopping along the playing step.
+class StepModifierView : public PlayfulScreen,
                          public app_services::MidiCommandManager::Listener,
-                         public app_view_models::ModifierViewModel::Listener,
-                         private juce::Timer {
+                         public app_view_models::ModifierViewModel::Listener {
   public:
     StepModifierView(tracktion::StepModifier *mod,
                      app_services::MidiCommandManager &mcm);
     ~StepModifierView() override;
-
-    void paint(juce::Graphics &g) override;
-    void resized() override;
 
     void encoder1Increased() override;
     void encoder1Decreased() override;
@@ -30,16 +27,24 @@ class StepModifierView : public juce::Component,
     void encoder4Increased() override;
     void encoder4Decreased() override;
 
+    void controlButtonPressed() override { repaint(); }
+    void controlButtonReleased() override { repaint(); }
+
     void parametersChanged() override;
+
+  protected:
+    juce::String getTitle() override { return "Step"; }
+    juce::String getSubtitle() override;
+    juce::String getPageLabel() override;
+    std::array<Playful::KnobInfo, 4> getKnobs() override;
+    void paintStage(juce::Graphics &g, double time) override;
+    juce::String getChangeSignature() override;
 
   private:
     tracktion::StepModifier::Ptr stepModifier;
     std::unique_ptr<app_view_models::ModifierViewModel> viewModel;
     app_services::MidiCommandManager &midiCommandManager;
-    AppLookAndFeel appLookAndFeel;
-
     int selectedStep = 0;
-    int playingStep = -1;
 
     // indices into the view model's parameters
     static constexpr int rateIndex = 0;
@@ -51,7 +56,8 @@ class StepModifierView : public juce::Component,
     int getNumSteps();
     void nudgeStep(float delta);
     void nudgeParameter(int index, int direction);
-    void timerCallback() override;
+    juce::String parameterText(int index);
+    float parameterPosition(int index);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(StepModifierView)
 };

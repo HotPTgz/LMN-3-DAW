@@ -3,6 +3,8 @@
 #include "FourOscView.h"
 #include "InternalPluginView.h"
 #include "LowPassPluginView.h"
+#include "PlayfulFactory.h"
+#include "PlayfulSamplerView.h"
 #include "SamplerView.h"
 #include <app_services/app_services.h>
 #include <internal_plugins/internal_plugins.h>
@@ -39,19 +41,18 @@ class ExtendedUIBehaviour : public tracktion::UIBehaviour {
                 if (auto drumSamplerPlugin =
                         dynamic_cast<internal_plugins::DrumSamplerPlugin *>(
                             samplerPlugin)) {
-                    std::unique_ptr<SamplerView> drumSamplerView =
-                        std::make_unique<SamplerView>(drumSamplerPlugin,
-                                                      *midiCommandManager);
-
-                    return drumSamplerView;
-
+                    return std::make_unique<PlayfulSamplerView>(
+                        drumSamplerPlugin, *midiCommandManager);
                 } else {
-                    std::unique_ptr<SamplerView> synthSamplerView =
-                        std::make_unique<SamplerView>(samplerPlugin,
-                                                      *midiCommandManager);
-                    return synthSamplerView;
+                    return std::make_unique<PlayfulSamplerView>(
+                        samplerPlugin, *midiCommandManager);
                 }
             }
+
+            // the playful screens for the knob-based plugins
+            if (auto playful =
+                    createPlayfulPluginView(&ws->plugin, *midiCommandManager))
+                return playful;
 
             if (auto reverbPlugin =
                     dynamic_cast<tracktion::ReverbPlugin *>(&(ws->plugin))) {

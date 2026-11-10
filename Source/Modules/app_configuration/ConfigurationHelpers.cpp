@@ -125,6 +125,23 @@ bool ConfigurationHelpers::getShowTitleBar(juce::File &configFile) {
     return true;
 }
 
+bool ConfigurationHelpers::getAnimations(juce::File &configFile) {
+    if (configFile.exists()) {
+        try {
+            YAML::Node rootNode =
+                YAML::LoadFile(configFile.getFullPathName().toStdString());
+            YAML::Node config = rootNode["config"];
+            if (config && config["animations"])
+                return config["animations"].as<bool>();
+        } catch (const std::exception &) {
+            // fall through to the default
+        }
+    }
+
+    // Default to animating
+    return true;
+}
+
 double ConfigurationHelpers::getWidth(juce::File &configFile) {
     if (configFile.exists()) {
         YAML::Node rootNode =
