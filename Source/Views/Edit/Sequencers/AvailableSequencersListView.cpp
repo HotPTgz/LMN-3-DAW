@@ -1,4 +1,5 @@
 #include "AvailableSequencersListView.h"
+#include "PlayfulSequencerViews.h"
 #include "PlayfulStyle.h"
 #include "StepSequencerView.h"
 #include <app_navigation/app_navigation.h>
@@ -20,7 +21,28 @@ AvailableSequencersListView::AvailableSequencersListView(
     titledList.setMascot(
         TitledListView::Mascot::bee,
         [this]() { return titledList.getSelectedItemName(); },
-        []() { return juce::String("notes on a grid"); });
+        [this]() {
+            static const juce::StringArray blurbs{
+                "notes on a grid, with per-step tricks",
+                "one row per kit sound, with fills",
+                "play notes in, it loops them", "bouncing balls play the notes",
+                "four patterns, chained into a song"};
+            return blurbs[titledList.getSelectedRow()];
+        });
+    titledList.setMascotChooser([this]() {
+        using M = TitledListView::Mascot;
+        static const M mascots[] = {M::bee, M::drum, M::caterpillar, M::tombola,
+                                    M::train};
+        int row = juce::jlimit(0, 4, titledList.getSelectedRow());
+        return mascots[row];
+    });
+    titledList.setItemInfo([](int index) {
+        static const juce::StringArray details{"grid", "kit", "loop", "balls",
+                                               "A B C D"};
+        ListItemInfo info;
+        info.detail = details[index];
+        return info;
+    });
 }
 
 AvailableSequencersListView::~AvailableSequencersListView() {
@@ -58,8 +80,19 @@ void AvailableSequencersListView::encoder1ButtonReleased() {
         if (midiCommandManager.getFocusedComponent() == this) {
             if (auto stackNavigationController = findParentComponentOfClass<
                     app_navigation::StackNavigationController>()) {
-                stackNavigationController->push(
-                    new StepSequencerView(track, midiCommandManager));
+                auto name = viewModel.getSelectedItem();
+                juce::Component *view = nullptr;
+                if (name == "Drums")
+                    view = new DrumSequencerView(track, midiCommandManager);
+                else if (name == "Endless")
+                    view = new EndlessSequencerView(track, midiCommandManager);
+                else if (name == "Tombola")
+                    view = new TombolaSequencerView(track, midiCommandManager);
+                else if (name == "Pattern")
+                    view = new PatternSequencerView(track, midiCommandManager);
+                else
+                    view = new StepSequencerView(track, midiCommandManager);
+                stackNavigationController->push(view);
                 midiCommandManager.setFocusedComponent(
                     stackNavigationController->getTopComponent());
             }

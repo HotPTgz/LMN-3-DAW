@@ -66,5 +66,12 @@ void drawOven(juce::Graphics &g, float cx, float cy, float s, double time,
 void drawMoon(juce::Graphics &g, float cx, float cy, float s, double time);
 void drawFlag(juce::Graphics &g, float x, float y, bool pointsRight,
               juce::Colour colour);
+void drawDrum(juce::Graphics &g, float cx, float cy, float s, double time);
+void drawCaterpillar(juce::Graphics &g, float cx, float cy, float s,
+                     double time);
+void drawTombola(juce::Graphics &g, float cx, float cy, float s, double time);
+void drawTrain(juce::Graphics &g, float cx, float cy, float s, double time);
+// a regular polygon with a vertex at the top, turned by angle (radians)
+juce::Path polygon(float cx, float cy, float radius, int sides, float angle);
 
 } // namespace Playful

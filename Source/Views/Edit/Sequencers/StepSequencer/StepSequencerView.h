@@ -32,6 +32,16 @@ class StepSequencerView
 
     void minusButtonReleased() override;
 
+    void encoder4Increased() override;
+    void encoder4Decreased() override;
+    void encoder4ButtonReleased() override;
+    void controlButtonPressed() override { repaint(); }
+    void controlButtonReleased() override { repaint(); }
+
+    // 0 notes, 1 step tricks, 2 groove
+    int getPage() const { return page; }
+    void setPage(int newPage);
+
     void patternChanged() override { repaint(); }
     void selectedNoteIndexChanged(int) override { repaint(); }
     void numberOfNotesChanged(int) override { repaint(); }
@@ -48,6 +58,13 @@ class StepSequencerView
     juce::String getChangeSignature() override;
 
   private:
+    int page = 0;
+    void paintNotes(juce::Graphics &g, double time);
+    void paintTricks(juce::Graphics &g);
+    void paintGroove(juce::Graphics &g, double time);
+    void paintTabs(juce::Graphics &g);
+    bool hasFocus();
+
     tracktion::AudioTrack::Ptr track;
     app_view_models::StepSequencerViewModel viewModel;
     app_services::MidiCommandManager &midiCommandManager;

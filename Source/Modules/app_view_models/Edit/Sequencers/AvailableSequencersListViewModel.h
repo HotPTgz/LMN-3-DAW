@@ -19,7 +19,8 @@ class AvailableSequencersListViewModel {
     juce::ValueTree state;
 
   public:
-    juce::StringArray sequencerNames = juce::StringArray({"Step"});
+    juce::StringArray sequencerNames =
+        juce::StringArray({"Step", "Drums", "Endless", "Tombola", "Pattern"});
     ItemListState itemListState;
 };
 

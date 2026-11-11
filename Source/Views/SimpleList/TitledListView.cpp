@@ -347,7 +347,7 @@ void TitledListView::paintSteps(juce::Graphics &g) {
 
 void TitledListView::paintMascot(juce::Graphics &g, double time, float cx,
                                  float cy) {
-    paintListMascot(g, mascot, cx, cy, time,
+    paintListMascot(g, mascotChooser ? mascotChooser() : mascot, cx, cy, time,
                     Colours::candy(juce::jmax(0, getSelectedRow())));
     if (mascotCaption)
         drawText(g, mascotCaption(), cx - 110.0f, cy + 74.0f, 220.0f, 24.0f,
@@ -375,6 +375,18 @@ void paintListMascot(juce::Graphics &g, TitledListView::Mascot mascot, float cx,
         break;
     case Mascot::robot:
         drawRobot(g, cx, cy, 0.9f, time);
+        break;
+    case Mascot::drum:
+        drawDrum(g, cx, cy, 0.95f, time);
+        break;
+    case Mascot::caterpillar:
+        drawCaterpillar(g, cx, cy, 1.2f, time);
+        break;
+    case Mascot::tombola:
+        drawTombola(g, cx, cy, 1.1f, time);
+        break;
+    case Mascot::train:
+        drawTrain(g, cx, cy, 1.1f, time);
         break;
     case Mascot::none:
     default:

@@ -59,8 +59,14 @@
 #include "Edit/Tempo/TempoSettingsViewModel.cpp"
 
 // Sequencers
+#include "Edit/Sequencers/SequencerEngine.cpp"
+#include "Edit/Sequencers/SequencerClip.cpp"
 #include "Edit/Sequencers/AvailableSequencersListViewModel.cpp"
 #include "Edit/Sequencers/StepSequencerViewModel.cpp"
+#include "Edit/Sequencers/DrumSequencerViewModel.cpp"
+#include "Edit/Sequencers/EndlessSequencerViewModel.cpp"
+#include "Edit/Sequencers/TombolaSequencerViewModel.cpp"
+#include "Edit/Sequencers/PatternSequencerViewModel.cpp"
 
 // Mixer
 #include "Edit/Mixer/MixerViewModel.cpp"

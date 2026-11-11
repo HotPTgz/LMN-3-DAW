@@ -30,7 +30,18 @@ class TitledListView : public PlayfulScreen {
         grid    // big cards, three to a row (projects)
     };
 
-    enum class Mascot { none, cat, bee, blob, ball, robot };
+    enum class Mascot {
+        none,
+        cat,
+        bee,
+        blob,
+        ball,
+        robot,
+        drum,
+        caterpillar,
+        tombola,
+        train
+    };
 
     TitledListView(const juce::StringArray &listItems,
                    const juce::String &titleString, ListTitle::IconType type,
@@ -51,6 +62,10 @@ class TitledListView : public PlayfulScreen {
     }
     void setMascot(Mascot m, std::function<juce::String()> caption = {},
                    std::function<juce::String()> subCaption = {});
+    // picks the character each time it's drawn (e.g. per selected item)
+    void setMascotChooser(std::function<Mascot()> chooser) {
+        mascotChooser = std::move(chooser);
+    }
     // the "1 modifier · 2 plugin · 3 knob" steps; -1 hides them
     void setStep(int s) { step = s; }
     void setEmptyMessage(const juce::String &m) { emptyMessage = m; }
@@ -78,6 +93,7 @@ class TitledListView : public PlayfulScreen {
     Layout layout = Layout::list;
     Mascot mascot = Mascot::none;
     std::function<juce::String()> mascotCaption, mascotSubCaption;
+    std::function<Mascot()> mascotChooser;
     std::function<ListItemInfo(int)> itemInfo;
     std::function<std::array<Playful::KnobInfo, 4>()> knobs;
     int step = -1;

@@ -40,6 +40,25 @@ class StepSequencerViewModel : public juce::ValueTree::Listener,
 
     void clearNotesAtSelectedIndex();
 
+    // per-step tricks (the STEP page) for the selected step; with all = true
+    // every step changes by the same amount
+    Sequencers::StepTricks getTricks(int step);
+    void nudgeVelocity(int delta, bool all = false);
+    void nudgeTie(int delta, bool all = false);
+    void nudgeChance(int delta, bool all = false);
+    void nudgeRatchet(int delta, bool all = false);
+
+    // groove (the GROOVE page)
+    Sequencers::StepGroove getGroove();
+    void nudgeSwing(int delta);
+    void nudgeGate(int delta);
+    void nudgeDirection(int delta);
+    void nudgeHumanize(int delta);
+
+    // passes of the pattern in the clip (more when it changes every time)
+    int getPasses();
+    bool isPlaying();
+
     void play();
     void stop();
 
@@ -90,6 +109,11 @@ class StepSequencerViewModel : public juce::ValueTree::Listener,
                                   const juce::Identifier &property) override;
 
     void generateMidiSequence();
+    Sequencers::StepInput makeStepInput();
+    std::array<Sequencers::StepTricks, 16> readTricks();
+    void writeTricks(const std::array<Sequencers::StepTricks, 16> &tricks);
+    void updateClipLength();
+    void tricksChanged();
 
     // used for transport changes
     void playbackContextChanged() override {}

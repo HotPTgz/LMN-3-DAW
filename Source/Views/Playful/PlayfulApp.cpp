@@ -382,4 +382,123 @@ void drawFlag(juce::Graphics &g, float x, float y, bool pointsRight,
     g.fillPath(flag);
 }
 
+juce::Path polygon(float cx, float cy, float radius, int sides, float angle) {
+    juce::Path p;
+    for (int i = 0; i < sides; i++) {
+        float a = angle - juce::MathConstants<float>::halfPi +
+                  i * juce::MathConstants<float>::twoPi / sides;
+        juce::Point<float> pt(cx + radius * std::cos(a),
+                              cy + radius * std::sin(a));
+        if (i == 0)
+            p.startNewSubPath(pt);
+        else
+            p.lineTo(pt);
+    }
+    p.closeSubPath();
+    return p;
+}
+
+void drawDrum(juce::Graphics &g, float cx, float cy, float s, double time) {
+    juce::Graphics::ScopedSaveState save(g);
+    g.addTransform(juce::AffineTransform::scale(s).translated(cx, cy));
+    // sticks take turns
+    for (int side : {-1, 1}) {
+        float hit = pingPong(time + (side > 0 ? 0.25 : 0.0), 0.5);
+        float a = juce::degreesToRadians(side * (8.0f + 18.0f * hit));
+        juce::Graphics::ScopedSaveState stick(g);
+        g.addTransform(
+            juce::AffineTransform::rotation(a, side * 14.0f, -40.0f));
+        g.setColour(Colours::orange);
+        g.drawLine(side * 14.0f, -40.0f, side * 56.0f, -86.0f, 7.0f);
+        g.setColour(Colours::yellow);
+        fillEllipseCentred(g, side * 58.0f, -89.0f, 8.0f, 8.0f);
+    }
+    g.setColour(Colours::red);
+    g.fillRoundedRectangle(-54, -34, 108, 78, 12);
+    juce::Path zig;
+    zig.startNewSubPath(-54, -26);
+    zig.lineTo(-27, 38);
+    zig.lineTo(0, -26);
+    zig.lineTo(27, 38);
+    zig.lineTo(54, -26);
+    g.setColour(Colours::cream);
+    g.strokePath(zig, roundStroke(4.0f));
+    g.setColour(Colours::red.darker(0.2f));
+    fillEllipseCentred(g, 0, 44, 54, 13);
+    g.setColour(Colours::cream);
+    fillEllipseCentred(g, 0, -34, 54, 16);
+    fillEllipseCentred(g, 0, 8, 22, 22);
+    drawFace(g, 0, 6, 0.8f, Mood::smile, time);
+}
+
+void drawCaterpillar(juce::Graphics &g, float cx, float cy, float s,
+                     double time) {
+    juce::Graphics::ScopedSaveState save(g);
+    float wiggle = 4.0f * pingPong(time, 1.0);
+    g.addTransform(juce::AffineTransform::scale(s).translated(cx + wiggle, cy));
+    float xs[] = {-66, -42, -18, 6}, ys[] = {8, 0, 6, 0};
+    for (int i = 0; i < 4; i++) {
+        g.setColour(i % 2 == 0 ? Colours::yellow : Colours::green);
+        fillEllipseCentred(g, xs[i], ys[i], 17, 17);
+        g.setColour(Colours::ink);
+        g.drawLine(xs[i] - 5, ys[i] + 16, xs[i] - 7, ys[i] + 24, 3.0f);
+        g.drawLine(xs[i] + 5, ys[i] + 16, xs[i] + 7, ys[i] + 24, 3.0f);
+    }
+    g.setColour(Colours::green);
+    g.drawLine(36, -26, 28, -50, 3.0f);
+    g.drawLine(50, -24, 58, -48, 3.0f);
+    g.setColour(Colours::pink);
+    fillEllipseCentred(g, 28, -52, 5, 5);
+    fillEllipseCentred(g, 58, -50, 5, 5);
+    g.setColour(Colours::green);
+    fillEllipseCentred(g, 42, -6, 24, 24);
+    drawFace(g, 44, -6, 0.85f, Mood::smile, time);
+}
+
+void drawTombola(juce::Graphics &g, float cx, float cy, float s, double time) {
+    float angle = float(time * 0.7);
+    auto shape = polygon(cx, cy, 60.0f * s, 6, angle);
+    g.setColour(Colours::panel);
+    g.fillPath(shape);
+    g.setColour(Colours::blue);
+    g.strokePath(shape,
+                 juce::PathStrokeType(7.0f * s, juce::PathStrokeType::curved,
+                                      juce::PathStrokeType::rounded));
+    float bob = 4.0f * pingPong(time, 0.8);
+    drawBadge(g, cx - 16.0f * s, cy + 22.0f * s - bob, 14.0f * s, Colours::pink,
+              time);
+    drawBadge(g, cx + 14.0f * s, cy + 28.0f * s, 14.0f * s, Colours::yellow,
+              time);
+    drawBadge(g, cx + 4.0f * s, cy - 6.0f * s + bob, 14.0f * s, Colours::green,
+              time);
+}
+
+void drawTrain(juce::Graphics &g, float cx, float cy, float s, double time) {
+    juce::Graphics::ScopedSaveState save(g);
+    g.addTransform(juce::AffineTransform::scale(s).translated(cx, cy));
+    for (int i = 0; i < 2; i++) {
+        float t = loop(time + i * 0.8, 1.6);
+        g.setColour(Colours::cream.withAlpha(0.8f * (1.0f - t)));
+        fillEllipseCentred(g, -34.0f - t * 12.0f, -66.0f - t * 30.0f,
+                           8.0f + t * 4.0f, 8.0f + t * 4.0f);
+    }
+    g.setColour(Colours::ink);
+    g.fillRoundedRectangle(-42, -54, 18, 26, 5);
+    g.setColour(Colours::orange);
+    g.fillRoundedRectangle(-46, -58, 26, 8, 4);
+    g.setColour(Colours::blue);
+    g.fillRoundedRectangle(-56, -30, 76, 52, 16);
+    g.setColour(Colours::purple);
+    g.fillRoundedRectangle(14, -56, 46, 78, 12);
+    g.setColour(Colours::cream);
+    g.fillRoundedRectangle(24, -46, 26, 22, 7);
+    for (float wx : {-34.0f, 38.0f}) {
+        g.setColour(Colours::ink);
+        fillEllipseCentred(g, wx, 28, 13, 13);
+        g.setColour(Colours::cream);
+        fillEllipseCentred(g, wx, 28, 5, 5);
+    }
+    drawFace(g, -20, -4, 0.85f, Mood::smile, time);
+}
+
 } // namespace Playful

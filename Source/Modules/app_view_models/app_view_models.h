@@ -130,8 +130,14 @@ namespace app_view_models {
 #include "Edit/Tempo/TempoSettingsViewModel.h"
 
 // Sequencers
+#include "Edit/Sequencers/SequencerEngine.h"
+#include "Edit/Sequencers/SequencerClip.h"
 #include "Edit/Sequencers/AvailableSequencersListViewModel.h"
 #include "Edit/Sequencers/StepSequencerViewModel.h"
+#include "Edit/Sequencers/DrumSequencerViewModel.h"
+#include "Edit/Sequencers/EndlessSequencerViewModel.h"
+#include "Edit/Sequencers/TombolaSequencerViewModel.h"
+#include "Edit/Sequencers/PatternSequencerViewModel.h"
 
 // Mixer
 #include "Edit/Mixer/MixerViewModel.h"

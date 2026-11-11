@@ -65,6 +65,8 @@ StepSequencerViewModel::StepSequencerViewModel(tracktion::AudioTrack::Ptr t)
     midiClip = dynamic_cast<tracktion::MidiClip *>(track->insertNewClip(
         tracktion::TrackItem::Type::midi, "step", midiClipTimeRange, nullptr));
 
+    // the clip may hold more than one pass (chance, random order...)
+    updateClipLength();
     generateMidiSequence();
 
     loopAroundClip(*midiClip);
@@ -251,29 +253,13 @@ void StepSequencerViewModel::valueTreePropertyChanged(
             markAndUpdate(shouldUpdateSelectedNoteIndex);
 
         if (property == IDs::numberOfNotes) {
-            double secondsPerBeat =
-                1.0 / track->edit.tempoSequence.getBeatsPerSecondAt(
-                          tracktion::TimePosition::fromSeconds(0.0));
-            midiClipEnd = tracktion::TimePosition::fromSeconds(
-                midiClipStart.inSeconds() +
-                (numberOfNotes.get() * (4.0 / double(notesPerMeasure.get())) *
-                 secondsPerBeat));
-            midiClip->setEnd(midiClipEnd, true);
-            loopAroundClip(*midiClip);
+            updateClipLength();
 
             markAndUpdate(shouldUpdateNumberOfNotes);
         }
 
         if (property == IDs::notesPerMeasure) {
-            double secondsPerBeat =
-                1.0 / track->edit.tempoSequence.getBeatsPerSecondAt(
-                          tracktion::TimePosition::fromSeconds(0.0));
-            midiClipEnd = tracktion::TimePosition::fromSeconds(
-                midiClipStart.inSeconds() +
-                (numberOfNotes.get() * (4.0 / double(notesPerMeasure.get())) *
-                 secondsPerBeat));
-            midiClip->setEnd(midiClipEnd, true);
-            loopAroundClip(*midiClip);
+            updateClipLength();
 
             markAndUpdate(shouldUpdateNotesPerMeasure);
         }
@@ -299,10 +285,8 @@ void StepSequencerViewModel::removeListener(Listener *l) {
     listeners.remove(l);
 }
 
-void StepSequencerViewModel::generateMidiSequence() {
-    auto &sequence = midiClip->getSequence();
-    sequence.clear(nullptr);
-
+Sequencers::StepInput StepSequencerViewModel::makeStepInput() {
+    Sequencers::StepInput input;
     for (int i = 0; i < getNumChannels(); i++)
         for (int j = 0; j < getNumNotesPerChannel(); j++)
             if (hasNoteAt(i, j)) {
@@ -312,12 +296,173 @@ void StepSequencerViewModel::generateMidiSequence() {
                 // possible is not 0, its 5
                 int pitch = i + (NOTES_PER_OCTAVE * getZeroBasedOctave()) +
                             MIN_NOTE_NUMBER;
-                auto startBeat = tracktion::BeatPosition::fromBeats(
-                    double(j * 4.0) / double(notesPerMeasure.get()));
-                auto duration = tracktion::BeatDuration::fromBeats(
-                    4.0 / double(notesPerMeasure.get()));
-                sequence.addNote(pitch, startBeat, duration, 127, 1, nullptr);
+                input.notes[size_t(j)].add(pitch);
             }
+    input.tricks = readTricks();
+    input.length = numberOfNotes.get();
+    input.stepsPerBar = notesPerMeasure.get();
+    input.groove = getGroove();
+    return input;
+}
+
+void StepSequencerViewModel::generateMidiSequence() {
+    auto &sequence = midiClip->getSequence();
+    sequence.clear(nullptr);
+    for (auto &note : Sequencers::generateStep(makeStepInput()))
+        sequence.addNote(note.pitch,
+                         tracktion::BeatPosition::fromBeats(note.start),
+                         tracktion::BeatDuration::fromBeats(note.length),
+                         note.velocity, 1, nullptr);
+}
+
+void StepSequencerViewModel::updateClipLength() {
+    double secondsPerBeat =
+        1.0 / track->edit.tempoSequence.getBeatsPerSecondAt(
+                  tracktion::TimePosition::fromSeconds(0.0));
+    midiClipEnd = tracktion::TimePosition::fromSeconds(
+        midiClipStart.inSeconds() +
+        (numberOfNotes.get() * (4.0 / double(notesPerMeasure.get())) *
+         secondsPerBeat * getPasses()));
+    if (midiClip != nullptr) {
+        midiClip->setEnd(midiClipEnd, true);
+        loopAroundClip(*midiClip);
+    }
+}
+
+int StepSequencerViewModel::getPasses() {
+    return Sequencers::stepPasses(makeStepInput());
+}
+
+bool StepSequencerViewModel::isPlaying() {
+    return track->edit.getTransport().isPlaying();
+}
+
+//==============================================================================
+namespace {
+const juce::Identifier stepTricksId("stepTricks"), stepSwingId("swing"),
+    stepGateId("gate"), stepDirectionId("direction"),
+    stepHumanizeId("humanize");
+} // namespace
+
+std::array<Sequencers::StepTricks, 16> StepSequencerViewModel::readTricks() {
+    std::array<Sequencers::StepTricks, 16> tricks;
+    auto steps =
+        juce::StringArray::fromTokens(state[stepTricksId].toString(), ";", "");
+    for (int i = 0; i < juce::jmin(16, steps.size()); i++) {
+        auto parts = juce::StringArray::fromTokens(steps[i], ",", "");
+        if (parts.size() < 4)
+            continue;
+        auto &t = tricks[size_t(i)];
+        t.velocity = juce::jlimit(1, 127, parts[0].getIntValue());
+        t.length = juce::jlimit(1, 16, parts[1].getIntValue());
+        t.chance = juce::jlimit(0.0f, 1.0f, parts[2].getFloatValue());
+        t.ratchet = juce::jlimit(1, 4, parts[3].getIntValue());
+    }
+    return tricks;
+}
+
+void StepSequencerViewModel::writeTricks(
+    const std::array<Sequencers::StepTricks, 16> &tricks) {
+    juce::StringArray steps;
+    for (auto &t : tricks)
+        steps.add(juce::String(t.velocity) + "," + juce::String(t.length) +
+                  "," + juce::String(t.chance, 2) + "," +
+                  juce::String(t.ratchet));
+    state.setProperty(stepTricksId, steps.joinIntoString(";"), nullptr);
+}
+
+void StepSequencerViewModel::tricksChanged() {
+    updateClipLength();
+    generateMidiSequence();
+    markAndUpdate(shouldUpdatePattern);
+}
+
+Sequencers::StepTricks StepSequencerViewModel::getTricks(int step) {
+    return readTricks()[size_t(juce::jlimit(0, 15, step))];
+}
+
+namespace {
+template <typename F>
+void stepChangeTricks(std::array<Sequencers::StepTricks, 16> &tricks,
+                      int selected, bool all, F change) {
+    for (int i = 0; i < 16; i++)
+        if (all || i == selected)
+            change(tricks[size_t(i)]);
+}
+} // namespace
+
+void StepSequencerViewModel::nudgeVelocity(int delta, bool all) {
+    auto tricks = readTricks();
+    stepChangeTricks(tricks, selectedNoteIndex.get(), all, [delta](auto &t) {
+        t.velocity = juce::jlimit(1, 127, t.velocity + delta * 4);
+    });
+    writeTricks(tricks);
+    tricksChanged();
+}
+
+void StepSequencerViewModel::nudgeTie(int delta, bool all) {
+    auto tricks = readTricks();
+    stepChangeTricks(tricks, selectedNoteIndex.get(), all, [delta](auto &t) {
+        t.length = juce::jlimit(1, 16, t.length + delta);
+    });
+    writeTricks(tricks);
+    tricksChanged();
+}
+
+void StepSequencerViewModel::nudgeChance(int delta, bool all) {
+    auto tricks = readTricks();
+    stepChangeTricks(tricks, selectedNoteIndex.get(), all, [delta](auto &t) {
+        t.chance = juce::jlimit(0.0f, 1.0f, t.chance + delta * 0.05f);
+    });
+    writeTricks(tricks);
+    tricksChanged();
+}
+
+void StepSequencerViewModel::nudgeRatchet(int delta, bool all) {
+    auto tricks = readTricks();
+    stepChangeTricks(tricks, selectedNoteIndex.get(), all, [delta](auto &t) {
+        t.ratchet = juce::jlimit(1, 4, t.ratchet + delta);
+    });
+    writeTricks(tricks);
+    tricksChanged();
+}
+
+Sequencers::StepGroove StepSequencerViewModel::getGroove() {
+    Sequencers::StepGroove groove;
+    groove.swing = double(state.getProperty(stepSwingId, 0.0));
+    groove.gate = double(state.getProperty(stepGateId, 0.9));
+    groove.direction = Sequencers::Direction(
+        juce::jlimit(0, 3, int(state.getProperty(stepDirectionId, 0))));
+    groove.humanize = double(state.getProperty(stepHumanizeId, 0.0));
+    return groove;
+}
+
+void StepSequencerViewModel::nudgeSwing(int delta) {
+    state.setProperty(stepSwingId,
+                      juce::jlimit(0.0, 1.0, getGroove().swing + delta * 0.05),
+                      nullptr);
+    tricksChanged();
+}
+
+void StepSequencerViewModel::nudgeGate(int delta) {
+    state.setProperty(stepGateId,
+                      juce::jlimit(0.1, 1.0, getGroove().gate + delta * 0.05),
+                      nullptr);
+    tricksChanged();
+}
+
+void StepSequencerViewModel::nudgeDirection(int delta) {
+    state.setProperty(stepDirectionId,
+                      juce::jlimit(0, 3, int(getGroove().direction) + delta),
+                      nullptr);
+    tricksChanged();
+}
+
+void StepSequencerViewModel::nudgeHumanize(int delta) {
+    state.setProperty(
+        stepHumanizeId,
+        juce::jlimit(0.0, 1.0, getGroove().humanize + delta * 0.05), nullptr);
+    tricksChanged();
 }
 
 void StepSequencerViewModel::setVideoPosition(
@@ -331,7 +476,15 @@ void StepSequencerViewModel::setVideoPosition(
     double beatTime =
         floorToFraction(beats.inBeats(), double(notesPerMeasure.get()) / 4.0);
     int note = (beatTime * notesPerMeasure.get()) / 4.0;
-    selectedNoteIndex.setValue(note, nullptr);
+    // the clip can hold several passes; show the step that is playing
+    int length = juce::jmax(1, numberOfNotes.get());
+    int pass = juce::jmax(0, note) / length,
+        slot = juce::jmax(0, note) % length;
+    auto direction = getGroove().direction;
+    if (direction == Sequencers::Direction::backward ||
+        (direction == Sequencers::Direction::pingPong && pass % 2 == 1))
+        slot = length - 1 - slot;
+    selectedNoteIndex.setValue(slot, nullptr);
 }
 
 double StepSequencerViewModel::floorToFraction(double number,

@@ -42,6 +42,7 @@ target_sources(Tests PRIVATE
         app_view_models/Utilities/AuxSendsAndModifiersTest.cpp
         app_configuration/AnimationsConfigTest.cpp
         app_view_models/Utilities/EnginesTest.cpp
+        app_view_models/Utilities/SequencersTest.cpp
 )
 
 target_compile_definitions(Tests PRIVATE
