@@ -78,6 +78,8 @@ namespace app_view_models {
 #include "Utilities/RenderPlanner.h"
 #include "Utilities/AuxSends.h"
 #include "Utilities/PluginPlacement.h"
+#include "Utilities/KnobMaps.h"
+#include "Utilities/PluginScanner.h"
 
 // ItemList
 #include "Edit/ItemList/ItemListState.h"
@@ -113,6 +115,7 @@ namespace app_view_models {
 #include "Edit/Plugins/EqualiserPluginViewModel.h"
 #include "Edit/Plugins/CompressorPluginViewModel.h"
 #include "Edit/Plugins/FourOscPluginViewModel.h"
+#include "Edit/Plugins/ExternalPluginViewModel.h"
 #include "Edit/Plugins/FourOsc/OscillatorViewModel.h"
 #include "Edit/Plugins/FourOsc/ADSRViewModel.h"
 #include "Edit/Plugins/FourOsc/FilterViewModel.h"

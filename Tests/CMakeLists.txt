@@ -43,6 +43,7 @@ target_sources(Tests PRIVATE
         app_configuration/AnimationsConfigTest.cpp
         app_view_models/Utilities/EnginesTest.cpp
         app_view_models/Utilities/SequencersTest.cpp
+        app_view_models/Utilities/KnobMapsTest.cpp
 )
 
 target_compile_definitions(Tests PRIVATE

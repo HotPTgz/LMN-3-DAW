@@ -5,6 +5,7 @@
 #include "LowPassPluginView.h"
 #include "PlayfulFactory.h"
 #include "PlayfulSamplerView.h"
+#include "PlayfulVst3Screen.h"
 #include "SamplerView.h"
 #include <app_services/app_services.h>
 #include <internal_plugins/internal_plugins.h>
@@ -19,6 +20,12 @@ class ExtendedUIBehaviour : public tracktion::UIBehaviour {
     createPluginWindow(tracktion::PluginWindowState &pws) override {
         std::unique_ptr<juce::AudioProcessorEditor> editor;
         if (auto ws = dynamic_cast<tracktion::Plugin::WindowState *>(&pws)) {
+            // VST3 plugins get a playful screen on the encoders (their
+            // knob map, or every parameter 8 to a page)
+            if (auto vst3 =
+                    createPlayfulVst3View(&ws->plugin, *midiCommandManager))
+                return vst3;
+
             if (auto externalPlugin =
                     dynamic_cast<tracktion::ExternalPlugin *>(&(ws->plugin))) {
                 if (auto pi = externalPlugin->getAudioPluginInstance()) {

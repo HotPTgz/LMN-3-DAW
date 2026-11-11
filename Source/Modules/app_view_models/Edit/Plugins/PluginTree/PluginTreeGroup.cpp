@@ -105,35 +105,8 @@ void PluginTreeGroup::populateBuiltInMidiFx(int &num) {
 }
 
 void PluginTreeGroup::scanForPlugins() const {
-    juce::Logger::writeToLog("scan for plugins called");
-    // Scan for plugins
-    juce::File homeDirectory = juce::File::getSpecialLocation(
-        juce::File::SpecialLocationType::userHomeDirectory);
-    juce::File vst3Directory = homeDirectory.getChildFile(".vst3");
-    if (!vst3Directory.exists()) {
-        vst3Directory.createDirectory();
-    }
-
-    edit.engine.getPluginManager().knownPluginList.clear();
-
-    for (auto format :
-         edit.engine.getPluginManager().pluginFormatManager.getFormats()) {
-        juce::Logger::writeToLog("looking for VST3 files...");
-        if (format->getName() == "VST3") {
-            juce::PluginDirectoryScanner scanner(
-                edit.engine.getPluginManager().knownPluginList,
-                reinterpret_cast<juce::AudioPluginFormat &>(*format),
-                juce::FileSearchPath(vst3Directory.getFullPathName()), true,
-                edit.engine.getTemporaryFileManager().getTempFile(
-                    "PluginScanDeadMansPedal"));
-
-            juce::String pluginBeingScanned;
-            juce::Logger::writeToLog("scanning " + pluginBeingScanned);
-            while (scanner.scanNextFile(false, pluginBeingScanned)) {
-                scanner.scanNextFile(false, pluginBeingScanned);
-            }
-        }
-    }
+    // scans the VST3 folders only when they changed since the last time
+    PluginScanner::loadOrScan(edit.engine);
 }
 
 } // namespace app_view_models

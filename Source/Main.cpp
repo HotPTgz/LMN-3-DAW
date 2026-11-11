@@ -79,6 +79,13 @@ class GuiAppApplication : public juce::JUCEApplication {
 
         ConfigurationHelpers::initSamples(engine);
 
+        // VST3 plugins: scanned once and remembered (scanned again only when
+        // the VST3 folders change), so projects that use them open properly.
+        // The built-in knob maps go to ~/.config/LMN-3/knob_maps.
+        app_view_models::PluginScanner::loadOrScan(engine);
+        app_view_models::KnobMaps::installDefaults(
+            app_view_models::KnobMaps::getDirectory());
+
         loadEdit(projectManager->getStartupProject());
 
         midiCommandManager =

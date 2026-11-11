@@ -8,6 +8,8 @@
 #include "Utilities/RenderPlanner.cpp"
 #include "Utilities/AuxSends.cpp"
 #include "Utilities/PluginPlacement.cpp"
+#include "Utilities/KnobMaps.cpp"
+#include "Utilities/PluginScanner.cpp"
 
 // EditItemList
 #include "Edit/ItemList/ItemListState.cpp"
@@ -38,6 +40,7 @@
 #include "Edit/Plugins/LowPassPluginViewModel.cpp"
 #include "Edit/Plugins/PhaserPluginViewModel.cpp"
 #include "Edit/Plugins/ChorusPluginViewModel.cpp"
+#include "Edit/Plugins/ExternalPluginViewModel.cpp"
 #include "Edit/Plugins/EqualiserPluginViewModel.cpp"
 #include "Edit/Plugins/CompressorPluginViewModel.cpp"
 #include "Edit/Plugins/FourOscPluginViewModel.cpp"

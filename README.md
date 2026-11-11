@@ -79,6 +79,39 @@ This is a manual process. 53 is the first note in the `+0` octave. You can add m
 a drum kit, you will need to create the directory to store the kit in, add the audio files to it, and then create the
 `.yaml` mapping file. Perhaps someone could make a JUCE application to make this easier (cough...cough).
 
+## VST3 Plugins
+VST3 plugins in `~/.vst3`, `/usr/lib/vst3` or `/usr/local/lib/vst3` show up under Instruments or Effects in the plugin list. They are scanned once and remembered in `~/.config/LMN-3/plugins.xml`; the folders are only scanned again when a plugin is added, removed or updated. A plugin that crashes the scan is skipped from then on.
+
+A VST3 plugin opens on a playful screen that works with the encoders. A *knob map* (a small YAML file in `~/.config/LMN-3/knob_maps`) picks its useful parameters and groups them into pages of 8: 4 on the encoders and 4 more while holding Control; +/− change page. Parameters that aren't in the map follow on "MORE" pages, and a plugin without a map gets every parameter, 8 to a page. Press encoder 1 to browse the plugin's presets (turn 1: preset, turn 2: bank of 16, press 1: load, press 2 or Stop: back).
+
+Maps for OB-Xd and Dexed are written to that folder the first time the app starts, so you can edit them or copy one as a starting point for another plugin:
+
+```yaml
+plugin: OB-Xd
+match: [obxd, ob-xd]        # parts of the plugin name, any case
+pages:
+  - name: FILTER
+    knobs:
+      - CUTOFF = Cutoff      # LABEL = parameter name
+      - RES = Resonance|Reso # | lists other spellings
+      - ""                   # an empty slot
+```
+
+### Installing Dexed and OB-Xd on the Raspberry Pi
+Both are part of [DISTRHO Ports](https://github.com/DISTRHO/DISTRHO-Ports), which can build them without their GUIs (the LMN-3 doesn't need them):
+
+```
+sudo apt install -y git meson ninja-build pkg-config libfftw3-dev libfreetype-dev libx11-dev libxext-dev libasound2-dev
+git clone --depth 1 https://github.com/DISTRHO/DISTRHO-Ports.git
+cd DISTRHO-Ports
+meson setup build --buildtype release -Dplugins=dexed,obxd -Dbuild-lv2=false -Dbuild-vst2=false -Dbuild-juce5-only=true -Dlinux-headless=true
+ninja -C build
+mkdir -p ~/.vst3
+find build -name "*.vst3" -maxdepth 4 -exec cp -r {} ~/.vst3/ \;
+```
+
+Then restart the LMN-3: the next time you add a plugin it finds them (the first scan takes a few seconds).
+
 ## Sequencers
 Press Sequencers to pick one for the selected track. Each writes an ordinary MIDI clip at the playhead (looped), so it plays any instrument and renders with the song. Hold + and press a key to add or remove notes; Play and Stop play the loop on its own.
 
