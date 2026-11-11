@@ -1,4 +1,5 @@
 #include "MidiInputListView.h"
+#include "PlayfulStyle.h"
 #include <app_navigation/app_navigation.h>
 
 MidiInputListView::MidiInputListView(tracktion::Edit &e,
@@ -12,6 +13,10 @@ MidiInputListView::MidiInputListView(tracktion::Edit &e,
     midiCommandManager.addListener(this);
 
     addAndMakeVisible(titledList);
+    titledList.setHint("press 1 to choose");
+    titledList.setPrimaryLabel(Playful::utf8("MIDI INPUT · SET"));
+    titledList.setMascot(TitledListView::Mascot::cat,
+                         [this]() { return titledList.getSelectedItemName(); });
 }
 
 MidiInputListView::~MidiInputListView() {

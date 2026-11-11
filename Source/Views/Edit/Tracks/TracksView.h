@@ -1,27 +1,25 @@
 #pragma once
-#include "AppLookAndFeel.h"
-#include "InformationPanelComponent.h"
-#include "LoopMarkerComponent.h"
-#include "PlayheadComponent.h"
-#include "TrackView.h"
-#include "TracksListBoxModel.h"
+#include "PlayfulParamScreen.h"
 #include <app_navigation/app_navigation.h>
 #include <app_services/app_services.h>
 #include <app_view_models/app_view_models.h>
 #include <juce_gui_extra/juce_gui_extra.h>
 #include <tracktion_engine/tracktion_engine.h>
 
-class TracksView : public juce::Component,
+/**
+ * The tracks screen, playful edition: candy lanes with jelly clips, a chick
+ * for the playhead and flags for the loop. Press encoder 1 to zoom into the
+ * selected track. Everything is painted here; the controls are the same as
+ * before.
+ */
+class TracksView : public PlayfulScreen,
                    public app_services::MidiCommandManager::Listener,
                    public app_view_models::TracksListViewModel::Listener,
                    public app_view_models::EditItemListViewModel::Listener,
-                   public app_view_models::ItemListState::Listener,
-                   private juce::Timer {
+                   public app_view_models::ItemListState::Listener {
   public:
     TracksView(tracktion::Edit &e, app_services::MidiCommandManager &mcm);
-    ~TracksView();
-    void paint(juce::Graphics &) override;
-    void resized() override;
+    ~TracksView() override;
 
     void encoder1Increased() override;
     void encoder1Decreased() override;
@@ -56,6 +54,9 @@ class TracksView : public juce::Component,
     void playButtonReleased() override;
     void stopButtonReleased() override;
 
+    void controlButtonPressed() override { repaint(); }
+    void controlButtonReleased() override { repaint(); }
+
     // ItemListState listener methods
     void selectedIndexChanged(int newIndex) override;
 
@@ -73,31 +74,49 @@ class TracksView : public juce::Component,
 
     app_view_models::TracksListViewModel &getViewModel() { return viewModel; };
 
+  protected:
+    juce::String getTitle() override;
+    juce::String getSubtitle() override;
+    juce::String getPageLabel() override;
+    std::array<Playful::KnobInfo, 4> getKnobs() override;
+    void paintStage(juce::Graphics &g, double time) override;
+    bool stageShowsStars() override { return false; }
+    bool wantsSmoothFrames() override;
+    juce::String getChangeSignature() override;
+
   private:
     tracktion::Edit &edit;
     app_services::MidiCommandManager &midiCommandManager;
     app_services::TimelineCamera camera;
     app_view_models::TracksListViewModel viewModel;
 
-    InformationPanelComponent informationPanel;
-    juce::ListBox singleTrackListBox;
-    juce::ListBox multiTrackListBox;
-    std::unique_ptr<TracksListBoxModel> listModel;
-
-    std::unique_ptr<TrackView> singleTrackView;
-
-    PlayheadComponent playheadComponent;
-
-    LoopMarkerComponent loopMarkerComponent;
-
-    juce::OwnedArray<juce::DrawableRectangle> beats;
-    AppLookAndFeel appLookAndFeel;
-
+    bool recording = false;
+    bool looping = false;
     bool shouldUpdateTrackColour = false;
 
-    void buildBeats();
+    bool isZoomed();
+    bool hasFocus();
+    tracktion::AudioTrack *getTrack(int index);
+    tracktion::AudioTrack *getSelectedTrack();
+    int getNumTracks();
+    juce::String barBeat(tracktion::TimePosition t);
 
-    void timerCallback() override;
+    // timeline drawing
+    struct Timeline {
+        float x, width;
+    };
+    float timeToX(const Timeline &tl, double seconds);
+    void paintBeats(juce::Graphics &g, const Timeline &tl, float top,
+                    float bottom, bool numbers);
+    void paintClips(juce::Graphics &g, const Timeline &tl,
+                    tracktion::AudioTrack &track, float top, float height,
+                    bool big, double time);
+    void paintLoopAndPlayhead(juce::Graphics &g, const Timeline &tl,
+                              float flagY, float top, float bottom,
+                              double time);
+    void paintLanes(juce::Graphics &g, double time);
+    void paintZoomed(juce::Graphics &g, double time);
+    bool isRecordingInto(tracktion::AudioTrack &track);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TracksView)
 };

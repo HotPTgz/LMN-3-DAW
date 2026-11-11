@@ -1,10 +1,9 @@
 #pragma once
-#include "AppLookAndFeel.h"
 #include <app_services/app_services.h>
 #include <juce_gui_extra/juce_gui_extra.h>
 
-// Small chooser shown by Control + Save.
-//   encoder 1 turn:  choose Mix / Stems
+// The render screen shown by Control + Save: an oven to bake the song in.
+//   encoder 1 turn:  choose Whole mix / Stems
 //   encoder 1 press: render
 //   stop or Control + Save: cancel
 // It takes the MIDI focus while open and gives it back when closed.
@@ -15,7 +14,9 @@ class RenderMenuComponent : public juce::Component,
     explicit RenderMenuComponent(app_services::MidiCommandManager &mcm);
     ~RenderMenuComponent() override;
 
-    void show(bool isLoopRender);
+    void show(bool isLoopRender, const juce::String &projectName = {});
+    // shows the oven baking while the (blocking) render runs
+    void showBaking();
     void close();
     bool isOpen() const { return isVisible(); }
 
@@ -32,10 +33,11 @@ class RenderMenuComponent : public juce::Component,
   private:
     app_services::MidiCommandManager &midiCommandManager;
     juce::Component *previouslyFocused = nullptr;
-    juce::StringArray items{"Mix", "Stems"};
     int selectedIndex = 0;
     bool loopRender = false;
-    AppLookAndFeel appLookAndFeel;
+    bool baking = false;
+    juce::String project;
+    double startTime = 0.0;
 
     void timerCallback() override;
 

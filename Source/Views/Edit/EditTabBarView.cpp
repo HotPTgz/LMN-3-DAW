@@ -2,6 +2,7 @@
 #include "AvailableSequencersListView.h"
 #include "FourOscView.h"
 #include "MixerView.h"
+#include "PlayfulApp.h"
 #include "PluginView.h"
 #include "SettingsListView.h"
 #include "TempoSettingsView.h"
@@ -50,16 +51,21 @@ EditTabBarView::EditTabBarView(tracktion::Edit &e,
     addChildComponent(renderMenu);
     renderMenu.setAlwaysOnTop(true);
     renderMenu.onRender = [this](int choice) {
-        // Let the menu disappear before the (blocking) render starts
+        // Let the oven show "baking" before the (blocking) render starts
         juce::Component::SafePointer<EditTabBarView> safeThis(this);
-        juce::MessageManager::callAsync([safeThis, choice]() {
-            if (safeThis != nullptr)
-                safeThis->render(
-                    choice == 0
-                        ? app_view_models::RenderPlanner::RenderType::mix
-                        : app_view_models::RenderPlanner::RenderType::stems);
+        juce::Timer::callAfterDelay(80, [safeThis, choice]() {
+            if (safeThis == nullptr)
+                return;
+            safeThis->render(
+                choice == 0
+                    ? app_view_models::RenderPlanner::RenderType::mix
+                    : app_view_models::RenderPlanner::RenderType::stems);
+            safeThis->renderMenu.close();
         });
     };
+
+    addChildComponent(powerOffOverlay);
+    powerOffOverlay.setAlwaysOnTop(true);
 
     midiCommandManager.addListener(this);
     viewModel.addListener(this);
@@ -94,20 +100,18 @@ void EditTabBarView::resized() {
                                      (getHeight() - octaveDisplayHeight) / 2,
                                      octaveDisplayWidth, octaveDisplayHeight);
 
-    auto font = messageBox.getFont();
-    int width = font.getStringWidth(messageBox.getMessage());
-    int messageBoxWidth = width + 50;
     int messageBoxHeight = getHeight() / 6;
+    auto font = Playful::font(messageBoxHeight * 0.36f, true);
+    int width = font.getStringWidth(messageBox.getMessage());
+    int messageBoxWidth =
+        juce::jmin(getWidth() - 20, width + messageBoxHeight + 10);
 
     messageBox.setBounds((getWidth() - messageBoxWidth) / 2,
                          (getHeight() - messageBoxHeight) / 2, messageBoxWidth,
                          messageBoxHeight);
 
-    int renderMenuWidth = getWidth() / 3;
-    int renderMenuHeight = getHeight() / 2;
-    renderMenu.setBounds((getWidth() - renderMenuWidth) / 2,
-                         (getHeight() - renderMenuHeight) / 2, renderMenuWidth,
-                         renderMenuHeight);
+    renderMenu.setBounds(getLocalBounds());
+    powerOffOverlay.setBounds(getLocalBounds());
 }
 
 void EditTabBarView::showMessage(const juce::String &message, int durationMs) {
@@ -163,18 +167,12 @@ void EditTabBarView::saveButtonReleased() {
 
 void EditTabBarView::powerOffHoldStarted() {
     powerOffSecondsLeft = powerOffHoldSeconds;
-    stopTimer(); // keep the message box up during the countdown
-    messageBox.setMessage("Power off in " + juce::String(powerOffSecondsLeft));
-    resized();
-    messageBox.setVisible(true);
+    messageBox.setVisible(false);
+    powerOffOverlay.start(powerOffHoldSeconds);
 
     powerOffCountdown.onTick = [this]() {
         powerOffSecondsLeft--;
-        if (powerOffSecondsLeft > 0) {
-            messageBox.setMessage("Power off in " +
-                                  juce::String(powerOffSecondsLeft));
-            resized();
-        } else {
+        if (powerOffSecondsLeft <= 0) {
             powerOffCountdown.stopTimer();
             saveAndPowerOff();
         }
@@ -185,6 +183,7 @@ void EditTabBarView::powerOffHoldStarted() {
 void EditTabBarView::powerOffHoldCancelled() {
     if (powerOffCountdown.isTimerRunning()) {
         powerOffCountdown.stopTimer();
+        powerOffOverlay.hide();
         showMessage("Power off cancelled");
     }
 }
@@ -195,15 +194,15 @@ void EditTabBarView::saveAndPowerOff() {
     tracktion::EditFileOperations(edit).save(true, true, false);
 
     stopTimer();
-    messageBox.setMessage("Saved. Shutting down...");
-    resized();
-    messageBox.setVisible(true);
+    powerOffOverlay.showSaved("Saved. Goodnight!");
 
     // let the message appear before the shutdown starts
     juce::Component::SafePointer<EditTabBarView> safeThis(this);
     juce::Timer::callAfterDelay(500, [safeThis]() {
-        if (!app_services::PowerControl::powerOff() && safeThis != nullptr)
+        if (!app_services::PowerControl::powerOff() && safeThis != nullptr) {
+            safeThis->powerOffOverlay.hide();
             safeThis->showMessage("Power off failed", 2000);
+        }
     });
 }
 
@@ -213,7 +212,9 @@ void EditTabBarView::renderButtonReleased() {
         if (renderMenu.isOpen())
             renderMenu.close();
         else
-            renderMenu.show(app_view_models::RenderPlanner::isLoopRender(edit));
+            renderMenu.show(app_view_models::RenderPlanner::isLoopRender(edit),
+                            app_services::ProjectManager::getProjectName(
+                                projectManager.getCurrentProject()));
     }
 }
 

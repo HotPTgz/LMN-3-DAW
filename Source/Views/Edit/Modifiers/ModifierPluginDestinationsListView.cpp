@@ -1,5 +1,6 @@
 #include "ModifierPluginDestinationsListView.h"
 #include "AvailablePluginParametersListView.h"
+#include "PlayfulStyle.h"
 #include <app_navigation/app_navigation.h>
 
 ModifierPluginDestinationsListView::ModifierPluginDestinationsListView(
@@ -14,6 +15,13 @@ ModifierPluginDestinationsListView::ModifierPluginDestinationsListView(
     midiCommandManager.addListener(this);
 
     addAndMakeVisible(titledList);
+
+    titledList.setStep(1);
+    titledList.setSubtitle(track->getName().toLowerCase());
+    titledList.setHint("press 1");
+    titledList.setPrimaryLabel(Playful::utf8("PLUGIN · NEXT"));
+    titledList.setMascot(TitledListView::Mascot::blob,
+                         []() { return juce::String("which plugin?"); });
 }
 
 ModifierPluginDestinationsListView::~ModifierPluginDestinationsListView() {

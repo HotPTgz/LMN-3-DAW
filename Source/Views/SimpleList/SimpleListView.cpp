@@ -23,3 +23,7 @@ void SimpleListView::setListItems(const juce::StringArray &listItems) {
     listModel->setItems(listItems);
     listBox.updateContent();
 }
+
+const juce::StringArray &SimpleListView::getListItems() const {
+    return listModel->getItems();
+}

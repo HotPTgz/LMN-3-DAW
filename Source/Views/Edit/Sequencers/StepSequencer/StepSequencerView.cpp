@@ -1,19 +1,11 @@
 #include "StepSequencerView.h"
+#include "PlayfulApp.h"
+
+using namespace Playful;
 
 StepSequencerView::StepSequencerView(tracktion::AudioTrack::Ptr p,
                                      app_services::MidiCommandManager &mcm)
-    : viewModel(p), midiCommandManager(mcm), grid(viewModel) {
-    notesPerMeasureLabel.setFont(
-        juce::Font(juce::Font::getDefaultMonospacedFontName(), getHeight() * .1,
-                   juce::Font::plain));
-    notesPerMeasureLabel.setText(juce::String(viewModel.getNotesPerMeasure()),
-                                 juce::dontSendNotification);
-    notesPerMeasureLabel.setJustificationType(juce::Justification::centred);
-    notesPerMeasureLabel.setColour(juce::Label::textColourId,
-                                   appLookAndFeel.colour2);
-    addAndMakeVisible(notesPerMeasureLabel);
-
-    addAndMakeVisible(grid);
+    : track(p), viewModel(p), midiCommandManager(mcm) {
     midiCommandManager.addListener(this);
     viewModel.addListener(this);
 }
@@ -24,26 +16,96 @@ StepSequencerView::~StepSequencerView() {
     midiCommandManager.removeListener(this);
 }
 
-void StepSequencerView::paint(juce::Graphics &g) {}
+bool StepSequencerView::wantsSmoothFrames() {
+    return track->edit.getTransport().isPlaying();
+}
 
-void StepSequencerView::resized() {
-    int horizontalPadding = getWidth() / 10;
-    int verticalpadding = getHeight() / 20;
+juce::String StepSequencerView::getSubtitle() {
+    return juce::String(viewModel.getNumberOfNotes()) + " steps" +
+           utf8("  ·  ") + juce::String(viewModel.getNotesPerMeasure()) +
+           " per bar";
+}
 
-    notesPerMeasureLabel.setFont(
-        juce::Font(juce::Font::getDefaultMonospacedFontName(),
-                   verticalpadding * 2, juce::Font::plain));
-    int notesPerMeasureWidth =
-        notesPerMeasureLabel.getFont().getStringWidth(
-            juce::String(viewModel.getNotesPerMeasure())) +
-        5;
-    int notesPerMeasureX =
-        double((horizontalPadding - notesPerMeasureWidth)) / 2.0;
-    notesPerMeasureLabel.setBounds(notesPerMeasureX, verticalpadding * 2,
-                                   notesPerMeasureWidth, verticalpadding * 2);
-    grid.setBounds(horizontalPadding, verticalpadding,
-                   getWidth() - 2 * horizontalPadding,
-                   getHeight() - 2 * verticalpadding);
+juce::String StepSequencerView::getPageLabel() {
+    return utf8("hold + and press a key: toggle  ·  − clear");
+}
+
+std::array<KnobInfo, 4> StepSequencerView::getKnobs() {
+    std::array<KnobInfo, 4> k;
+    int steps = viewModel.getNumberOfNotes();
+    int perBar = viewModel.getNotesPerMeasure();
+    int selected = viewModel.getSelectedNoteIndex();
+    k[0] = {"LENGTH", juce::String(steps) + " steps",
+            steps / float(viewModel.getNumNotesPerChannel()), Colours::blue};
+    k[1] = {"STEPS PER BAR", juce::String(perBar), perBar / 16.0f,
+            Colours::green};
+    k[2] = {"STEP", juce::String(selected + 1),
+            steps > 1 ? selected / float(steps - 1) : 1.0f, Colours::cream};
+    k[3].enabled = false;
+    return k;
+}
+
+juce::String StepSequencerView::getChangeSignature() {
+    juce::String s = PlayfulScreen::getChangeSignature();
+    for (int c = 0; c < viewModel.getNumChannels(); c++)
+        for (int n = 0; n < viewModel.getNumNotesPerChannel(); n++)
+            if (viewModel.hasNoteAt(c, n))
+                s << "," << c << ":" << n;
+    return s;
+}
+
+void StepSequencerView::paintStage(juce::Graphics &g, double time) {
+    static const char *names[] = {"C",  "C#", "D",  "D#", "E",  "F",
+                                  "F#", "G",  "G#", "A",  "A#", "B"};
+    const int rows = viewModel.getNumChannels();
+    const int cols = viewModel.getNumNotesPerChannel();
+    const float x0 = 52.0f, top = 20.0f, bottom = 320.0f;
+    const float w = (784.0f - x0) / cols;
+    const float h = (bottom - top) / rows;
+    int steps = viewModel.getNumberOfNotes();
+    int perBar = juce::jmax(1, viewModel.getNotesPerMeasure());
+    int selected = viewModel.getSelectedNoteIndex();
+    bool playing = track->edit.getTransport().isPlaying();
+
+    for (int row = 0; row < rows; row++) {
+        float y = bottom - (row + 1) * h;
+        int pitchClass = row % 12;
+        bool sharp = juce::String(names[pitchClass]).contains("#");
+        if (!sharp)
+            drawText(g, names[pitchClass], 4, y, 40, h, 9, Colours::muted,
+                     pitchClass == 0, juce::Justification::centredRight);
+
+        for (int col = 0; col < cols; col++) {
+            float x = x0 + col * w;
+            bool inPattern = col < steps;
+            bool on = viewModel.hasNoteAt(row, col);
+            juce::Rectangle<float> cell(x + 2.0f, y + 1.0f, w - 4.0f, h - 2.0f);
+            if (on) {
+                g.setColour(
+                    Colours::candy(row).withAlpha(inPattern ? 1.0f : 0.3f));
+                g.fillRoundedRectangle(cell, h / 2.0f);
+            } else {
+                bool altBar = (col / perBar) % 2 == 1;
+                auto base = altBar ? Colours::dim : Colours::panel;
+                if (sharp)
+                    base = base.darker(0.25f);
+                g.setColour(inPattern ? base : base.withAlpha(0.3f));
+                g.fillRoundedRectangle(cell, 4.0f);
+            }
+        }
+    }
+
+    // the step being edited (or played)
+    float sx = x0 + selected * w;
+    if (playing) {
+        g.setColour(Colours::yellow.withAlpha(0.15f));
+        g.fillRoundedRectangle(sx, top - 2.0f, w, bottom - top + 4.0f, 8.0f);
+        drawBee(g, sx + w / 2.0f, 9.0f, 0.8f, time);
+    } else {
+        g.setColour(Colours::cream);
+        g.drawRoundedRectangle(sx, top - 2.0f, w, bottom - top + 4.0f, 8.0f,
+                               3.0f);
+    }
 }
 
 void StepSequencerView::noteOnPressed(int noteNumber) {
@@ -89,8 +151,4 @@ void StepSequencerView::minusButtonReleased() {
     viewModel.clearNotesAtSelectedIndex();
 }
 
-void StepSequencerView::notesPerMeasureChanged(int newNotesPerMeasure) {
-    notesPerMeasureLabel.setText(juce::String(viewModel.getNotesPerMeasure()),
-                                 juce::dontSendNotification);
-    resized();
-}
+void StepSequencerView::notesPerMeasureChanged(int) { repaint(); }

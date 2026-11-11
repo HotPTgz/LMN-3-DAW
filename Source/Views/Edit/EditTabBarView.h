@@ -1,6 +1,7 @@
 #pragma once
 #include "MessageBox.h"
 #include "OctaveDisplayComponent.h"
+#include "PowerOffOverlay.h"
 #include "RenderMenuComponent.h"
 #include <app_navigation/app_navigation.h>
 #include <app_services/app_services.h>
@@ -65,6 +66,7 @@ class EditTabBarView : public juce::TabbedComponent,
     OctaveDisplayComponent octaveDisplayComponent;
     MessageBox messageBox;
     RenderMenuComponent renderMenu;
+    PowerOffOverlay powerOffOverlay;
 
     // Counts down while Control + Stop are held
     struct PowerOffCountdown : public juce::Timer {

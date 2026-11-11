@@ -1,25 +1,20 @@
 #pragma once
-#include "AppLookAndFeel.h"
-#include "BeatSettingsComponent.h"
-#include "FontData.h"
-#include "LabelColour1LookAndFeel.h"
+#include "PlayfulParamScreen.h"
 #include <app_services/app_services.h>
 #include <app_view_models/app_view_models.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <tracktion_engine/tracktion_engine.h>
 
+// Tempo, quantize grid, swing and click volume, with a swinging metronome
 class TempoSettingsView
-    : public juce::Component,
+    : public PlayfulScreen,
       public app_services::MidiCommandManager::Listener,
       public app_view_models::TempoSettingsViewModel::Listener {
   public:
     TempoSettingsView(tracktion::Edit &e,
                       app_services::MidiCommandManager &mcm);
-    ~TempoSettingsView();
-
-    void paint(juce::Graphics &g) override;
-    void resized() override;
+    ~TempoSettingsView() override;
 
     void encoder1Increased() override;
     void encoder1Decreased() override;
@@ -41,26 +36,26 @@ class TempoSettingsView
     void quantizeSettingsChanged(const juce::String &gridName,
                                  const int swingPercent) override;
 
+  protected:
+    juce::String getTitle() override { return "Tempo"; }
+    juce::String getSubtitle() override { return "4/4"; }
+    juce::String getPageLabel() override;
+    std::array<Playful::KnobInfo, 4> getKnobs() override;
+    void paintStage(juce::Graphics &g, double time) override;
+    bool wantsSmoothFrames() override;
+
   private:
     tracktion::Edit &edit;
     app_view_models::TempoSettingsViewModel viewModel;
     app_services::MidiCommandManager &midiCommandManager;
 
-    BeatSettingsComponent beatSettingsComponent;
+    double bpm = 120.0;
+    double clickGain = 0.6;
+    bool tapMode = false;
+    juce::String gridName = "1/16";
+    int swing = 0;
 
-    juce::Label gainIcon;
-    juce::Slider gainSlider;
-
-    juce::Typeface::Ptr fontAwesomeTypeface =
-        juce::Typeface::createSystemTypefaceFor(
-            FontData::FontAwesome6FreeSolid900_otf,
-            FontData::FontAwesome6FreeSolid900_otfSize);
-    juce::Font fontAwesomeFont = juce::Font(fontAwesomeTypeface);
-    juce::Label tapIcon;
-    juce::Label quantizeLabel;
-
-    LabelColour1LookAndFeel labelColour1LookAndFeel;
-    AppLookAndFeel appLookAndFeel;
+    bool hasFocus();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TempoSettingsView)
 };

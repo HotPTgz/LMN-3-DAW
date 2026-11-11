@@ -1,4 +1,5 @@
 #include "ProjectsListView.h"
+#include "PlayfulStyle.h"
 
 const juce::String ProjectsListView::defaultTitle = "Projects";
 
@@ -9,6 +10,31 @@ ProjectsListView::ProjectsListView(app_services::ProjectManager &pm,
                  juce::String::charToString(0xf07b)) {
     midiCommandManager.addListener(this);
     addAndMakeVisible(titledList);
+
+    titledList.setLayout(TitledListView::Layout::grid);
+    titledList.setHint(Playful::utf8("+ new  ·  − delete"));
+    titledList.setPrimaryLabel(Playful::utf8("PROJECT · OPEN"));
+    titledList.setItemInfo([this](int index) {
+        ListItemInfo info;
+        if (!juce::isPositiveAndBelow(index, projects.size()))
+            return info;
+        auto file = projects[index];
+        info.name = app_services::ProjectManager::getProjectName(file);
+        info.marked = file == projectManager.getCurrentProject();
+        auto modified = file.getLastModificationTime();
+        auto now = juce::Time::getCurrentTime();
+        auto days = int((now - modified).inDays());
+        if (days < 1 && now.getDayOfMonth() == modified.getDayOfMonth())
+            info.detail = "today  " + modified.formatted("%H:%M");
+        else if (days < 2)
+            info.detail = "yesterday";
+        else
+            info.detail = modified.formatted("%e %b").trim();
+        if (info.marked)
+            info.detail += Playful::utf8("  ·  open");
+        return info;
+    });
+
     refresh();
 
     // Start with the open project selected
@@ -49,6 +75,8 @@ juce::StringArray ProjectsListView::getDisplayNames() const {
 void ProjectsListView::refresh() {
     projects = projectManager.getProjects();
     titledList.setListItems(getDisplayNames());
+    titledList.setSubtitle(juce::String(projects.size()) +
+                           (projects.size() == 1 ? " project" : " projects"));
     setSelectedIndex(selectedIndex);
 }
 

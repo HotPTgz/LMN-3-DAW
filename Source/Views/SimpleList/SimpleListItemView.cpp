@@ -1,4 +1,5 @@
 #include "SimpleListItemView.h"
+#include "PlayfulApp.h"
 
 SimpleListItemView::SimpleListItemView(juce::String title) {
     // set default colors
@@ -17,11 +18,15 @@ SimpleListItemView::SimpleListItemView(juce::String title) {
     titleLabel.setText(title, juce::dontSendNotification);
     titleLabel.setJustificationType(juce::Justification::left);
     titleLabel.setMinimumHorizontalScale(1.0);
-    addAndMakeVisible(titleLabel);
+    // painted as a playful card instead
+    addChildComponent(titleLabel);
 }
 
 void SimpleListItemView::paint(juce::Graphics &g) {
-    g.fillAll(backgroundColour);
+    g.fillAll(Playful::Colours::background);
+    Playful::drawCard(g, getLocalBounds().toFloat().reduced(4.0f, 3.0f),
+                      titleLabel.getText(), {}, Playful::Colours::blue,
+                      isSelected);
 }
 
 void SimpleListItemView::resized() {

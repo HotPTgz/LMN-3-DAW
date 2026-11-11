@@ -17,7 +17,7 @@ Note that this does require you to run the 64-Bit version of the Raspberry Pi OS
 If you wish to configure the application, you can add a `config.yaml` file to `~/.config/LMN-3`. 
 You can configure whether to show a title bar, the width and height of the application window, and
 whether the plugin screens are animated (`animations`, on by default; set it to `false` to keep the
-playful plugin screens still, e.g. to save CPU). You can also configure a basic color scheme. An example
+playful plugin screens still, e.g. to save CPU). You can also configure a basic color scheme (it only changes the few screens that are not drawn in the playful style; leave it out to get the playful palette everywhere). An example
 config file is shown below:
 ```yaml
 config:

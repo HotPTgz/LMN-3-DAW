@@ -10,6 +10,7 @@ class SimpleListView : public juce::Component {
 
     juce::ListBox &getListBox();
     void setListItems(const juce::StringArray &listItems);
+    const juce::StringArray &getListItems() const;
 
   private:
     juce::ListBox listBox;

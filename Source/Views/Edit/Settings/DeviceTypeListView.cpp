@@ -1,4 +1,5 @@
 #include "DeviceTypeListView.h"
+#include "PlayfulStyle.h"
 #include <app_navigation/app_navigation.h>
 
 DeviceTypeListView::DeviceTypeListView(tracktion::Edit &e,
@@ -12,6 +13,10 @@ DeviceTypeListView::DeviceTypeListView(tracktion::Edit &e,
     midiCommandManager.addListener(this);
 
     addAndMakeVisible(titledList);
+    titledList.setHint("press 1 to choose");
+    titledList.setPrimaryLabel(Playful::utf8("DEVICE TYPE · SET"));
+    titledList.setMascot(TitledListView::Mascot::cat,
+                         [this]() { return titledList.getSelectedItemName(); });
 }
 
 DeviceTypeListView::~DeviceTypeListView() {

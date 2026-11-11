@@ -33,7 +33,7 @@ void PlayfulScreen::timerCallback() {
         return;
     }
 
-    if (animate) {
+    if (animate || wantsSmoothFrames()) {
         setRate(30);
         repaint();
         return;

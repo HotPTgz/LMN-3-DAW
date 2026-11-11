@@ -1,4 +1,5 @@
 #include "OutputListView.h"
+#include "PlayfulStyle.h"
 #include <app_navigation/app_navigation.h>
 
 OutputListView::OutputListView(tracktion::Edit &e, juce::AudioDeviceManager &dm,
@@ -11,6 +12,10 @@ OutputListView::OutputListView(tracktion::Edit &e, juce::AudioDeviceManager &dm,
     midiCommandManager.addListener(this);
 
     addAndMakeVisible(titledList);
+    titledList.setHint("press 1 to choose");
+    titledList.setPrimaryLabel(Playful::utf8("OUTPUT · SET"));
+    titledList.setMascot(TitledListView::Mascot::cat,
+                         [this]() { return titledList.getSelectedItemName(); });
 }
 
 OutputListView::~OutputListView() {

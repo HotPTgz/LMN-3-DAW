@@ -1,4 +1,5 @@
 #include "AvailableSequencersListView.h"
+#include "PlayfulStyle.h"
 #include "StepSequencerView.h"
 #include <app_navigation/app_navigation.h>
 
@@ -12,6 +13,14 @@ AvailableSequencersListView::AvailableSequencersListView(
     midiCommandManager.addListener(this);
 
     addAndMakeVisible(titledList);
+
+    titledList.setSubtitle(track->getName().toLowerCase());
+    titledList.setHint("press 1 to open");
+    titledList.setPrimaryLabel(Playful::utf8("SEQUENCER · OPEN"));
+    titledList.setMascot(
+        TitledListView::Mascot::bee,
+        [this]() { return titledList.getSelectedItemName(); },
+        []() { return juce::String("notes on a grid"); });
 }
 
 AvailableSequencersListView::~AvailableSequencersListView() {

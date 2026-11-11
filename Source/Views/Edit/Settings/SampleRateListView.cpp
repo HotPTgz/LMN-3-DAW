@@ -1,4 +1,5 @@
 #include "SampleRateListView.h"
+#include "PlayfulStyle.h"
 #include <app_navigation/app_navigation.h>
 
 SampleRateListView::SampleRateListView(tracktion::Edit &e,
@@ -12,6 +13,10 @@ SampleRateListView::SampleRateListView(tracktion::Edit &e,
     midiCommandManager.addListener(this);
 
     addAndMakeVisible(titledList);
+    titledList.setHint("press 1 to choose");
+    titledList.setPrimaryLabel(Playful::utf8("SAMPLE RATE · SET"));
+    titledList.setMascot(TitledListView::Mascot::cat,
+                         [this]() { return titledList.getSelectedItemName(); });
 }
 
 SampleRateListView::~SampleRateListView() {

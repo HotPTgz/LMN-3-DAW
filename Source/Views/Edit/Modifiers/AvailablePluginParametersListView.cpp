@@ -1,5 +1,6 @@
 #include "AvailablePluginParametersListView.h"
 #include "ModifierView.h"
+#include "PlayfulStyle.h"
 #include <app_navigation/app_navigation.h>
 AvailablePluginParametersListView::AvailablePluginParametersListView(
     tracktion::AudioTrack::Ptr t, tracktion::Plugin::Ptr p,
@@ -14,6 +15,14 @@ AvailablePluginParametersListView::AvailablePluginParametersListView(
     midiCommandManager.addListener(this);
 
     addAndMakeVisible(titledList);
+
+    titledList.setStep(2);
+    titledList.setSubtitle(track->getName().toLowerCase());
+    titledList.setHint("press 1");
+    titledList.setPrimaryLabel(Playful::utf8("KNOB · ADD"));
+    titledList.setMascot(TitledListView::Mascot::blob, []() {
+        return juce::String("which knob should it turn?");
+    });
 }
 
 AvailablePluginParametersListView::~AvailablePluginParametersListView() {

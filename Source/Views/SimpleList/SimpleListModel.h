@@ -13,6 +13,7 @@ class SimpleListModel : public juce::ListBoxModel {
                            juce::Component *existingComponentToUpdate) override;
 
     void setItems(juce::StringArray listItems);
+    const juce::StringArray &getItems() const { return items; }
 
   private:
     juce::StringArray items;

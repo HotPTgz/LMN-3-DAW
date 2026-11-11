@@ -1,6 +1,7 @@
 #include "TrackModifiersListView.h"
 #include "AvailableModifiersListView.h"
 #include "ModifierView.h"
+#include "PlayfulStyle.h"
 #include <app_navigation/app_navigation.h>
 TrackModifiersListView::TrackModifiersListView(
     tracktion::AudioTrack::Ptr t, app_services::MidiCommandManager &mcm)
@@ -20,9 +21,44 @@ TrackModifiersListView::TrackModifiersListView(
     emptyListLabel.setJustificationType(juce::Justification::centred);
     emptyListLabel.setAlwaysOnTop(true);
     emptyListLabel.setLookAndFeel(&labelColour1LookAndFeel);
-    addChildComponent(emptyListLabel);
+    // the playful list shows its own "empty" message
 
     addAndMakeVisible(titledList);
+
+    titledList.setLayout(TitledListView::Layout::linked);
+    titledList.setHint(Playful::utf8("press 1 to edit  ·  + add  ·  − remove"));
+    titledList.setEmptyMessage("Press + to add a modifier!");
+    titledList.setMascot(TitledListView::Mascot::blob);
+    titledList.setItemInfo([this](int index) {
+        // items read "LFO>4OSC:Filter Freq", with a * when switched off
+        ListItemInfo info;
+        auto text = viewModel.listViewModel.getItemNames()[index];
+        info.off = text.endsWith("*");
+        text = text.trimCharactersAtEnd("*");
+        info.name = text.upToFirstOccurrenceOf(">", false, false);
+        auto target = text.fromFirstOccurrenceOf(">", false, false);
+        info.target = target.upToFirstOccurrenceOf(":", false, false);
+        info.targetDetail = target.fromFirstOccurrenceOf(":", false, false);
+        if (info.off)
+            info.detail = "off";
+        return info;
+    });
+    titledList.setKnobs([this]() {
+        std::array<Playful::KnobInfo, 4> k;
+        int n = titledList.getNumItems();
+        int row = titledList.getSelectedRow();
+        k[0] = {Playful::utf8("MODIFIER · EDIT"),
+                titledList.getSelectedItemName(),
+                n > 1 ? float(row) / float(n - 1) : 1.0f,
+                Playful::Colours::blue, n > 0};
+        k[1].enabled = false;
+        k[2].enabled = false;
+        bool off =
+            n > 0 && viewModel.listViewModel.getItemNames()[row].endsWith("*");
+        k[3] = {Playful::utf8("— · ON/OFF"), off ? "off" : "on",
+                off ? 0.0f : 1.0f, Playful::Colours::red, n > 0};
+        return k;
+    });
 }
 
 TrackModifiersListView::~TrackModifiersListView() {

@@ -1,5 +1,6 @@
 #include "AvailablePluginsListView.h"
 #include "FourOscView.h"
+#include "PlayfulStyle.h"
 #include "PluginView.h"
 #include <app_navigation/app_navigation.h>
 AvailablePluginsListView::AvailablePluginsListView(
@@ -12,6 +13,11 @@ AvailablePluginsListView::AvailablePluginsListView(
     titledSplitList.getSplitListView().getRightListView().setLookAndFeel(
         &listItemColour2LookAndFeel);
     addAndMakeVisible(titledSplitList);
+
+    titledSplitList.setHint("press 2 to add");
+    titledSplitList.setLabels("CATEGORY", Playful::utf8("PLUGIN · ADD"));
+    titledSplitList.setCaption(
+        [this]() { return track->getName().toLowerCase(); });
     midiCommandManager.addListener(this);
 
     titledSplitList.getSplitListView()

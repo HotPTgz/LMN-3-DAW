@@ -52,6 +52,9 @@ class PlayfulScreen : public juce::Component, private juce::Timer {
     virtual std::array<Playful::KnobInfo, 4> getKnobs() = 0;
     virtual void paintStage(juce::Graphics &g, double time) = 0;
     virtual bool stageShowsStars() { return true; }
+    // true while the screen must redraw every frame even with animations
+    // turned off (e.g. a moving playhead)
+    virtual bool wantsSmoothFrames() { return false; }
 
     // something that changes whenever the screen should be redrawn (used
     // when not animating). Defaults to the knob values and subtitle.

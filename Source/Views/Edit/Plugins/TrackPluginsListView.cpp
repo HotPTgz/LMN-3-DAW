@@ -2,6 +2,7 @@
 #include "AvailablePluginsListView.h"
 #include "EditTabBarView.h"
 #include "FourOscView.h"
+#include "PlayfulStyle.h"
 #include "PluginView.h"
 #include <app_navigation/app_navigation.h>
 TrackPluginsListView::TrackPluginsListView(
@@ -22,9 +23,56 @@ TrackPluginsListView::TrackPluginsListView(
     emptyListLabel.setJustificationType(juce::Justification::centred);
     emptyListLabel.setAlwaysOnTop(true);
     emptyListLabel.setLookAndFeel(&labelColour1LookAndFeel);
-    addChildComponent(emptyListLabel);
+    // the playful list shows its own "empty" message
 
     addAndMakeVisible(titledList);
+
+    titledList.setLayout(TitledListView::Layout::chain);
+    titledList.setSubtitle(track->getName().toLowerCase());
+    titledList.setHint(Playful::utf8("+ add  ·  − remove"));
+    titledList.setEmptyMessage("Press + to add a plugin!");
+    titledList.setItemInfo([this](int index) {
+        ListItemInfo info;
+        auto plugin = dynamic_cast<tracktion::Plugin *>(
+            viewModel.listViewModel.getAdapter()->getItemAtIndex(index));
+        if (plugin == nullptr)
+            return info;
+        auto type = plugin->getPluginType();
+        if (plugin->isSynth())
+            info.kind = "INSTRUMENT";
+        else if (type == "lmn3Arpeggiator" || type == "lmn3Chord" ||
+                 type == "lmn3ScaleLock")
+            info.kind = "MIDI FX";
+        else if (type == tracktion::AuxSendPlugin::xmlTypeName)
+            info.kind = "SEND";
+        else
+            info.kind = "EFFECT";
+        info.name = plugin->getName();
+        if (auto send = dynamic_cast<tracktion::AuxSendPlugin *>(plugin))
+            info.name = send->getBusNumber() == 0 ? "Send A" : "Send B";
+        info.off = !plugin->isEnabled();
+        return info;
+    });
+    titledList.setKnobs([this]() {
+        std::array<Playful::KnobInfo, 4> k;
+        int n = titledList.getNumItems();
+        int row = titledList.getSelectedRow();
+        bool any = n > 0;
+        auto plugin = dynamic_cast<tracktion::Plugin *>(
+            viewModel.listViewModel.getSelectedItem());
+        k[0] = {Playful::utf8("PLUGIN · OPEN"),
+                titledList.getSelectedItemName(),
+                n > 1 ? float(row) / float(n - 1) : 1.0f,
+                Playful::Colours::blue, any};
+        k[1].enabled = false;
+        k[2] = {"MOVE", juce::String(row + 1) + " of " + juce::String(n),
+                n > 1 ? float(row) / float(n - 1) : 1.0f,
+                Playful::Colours::cream, any};
+        bool on = plugin != nullptr && plugin->isEnabled();
+        k[3] = {Playful::utf8("— · BYPASS"), on ? "on" : "bypassed",
+                on ? 1.0f : 0.0f, Playful::Colours::red, any};
+        return k;
+    });
 }
 
 TrackPluginsListView::~TrackPluginsListView() {
