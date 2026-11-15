@@ -63,6 +63,14 @@ jobs:
           chmod +x gradlew
           ./gradlew --no-daemon assembleRelease_Release
 
+      - name: List all compile errors
+        if: failure()
+        working-directory: Android/Builds/Android/app
+        run: |
+          dir=$(dirname $(find .cxx -name build.ninja | head -1))
+          ninja=$(find $ANDROID_HOME/cmake -name ninja -type f | head -1)
+          $ninja -C "$dir" -k 0 2>&1 | grep -E "error:" | sort -u | head -150 || true
+
       - name: Package
         run: |
           mkdir -p package

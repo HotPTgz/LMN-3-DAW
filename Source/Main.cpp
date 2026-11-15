@@ -1,3 +1,6 @@
+// Android: lets the code below use JUCE's Java helpers (must come before the
+// JUCE headers)
+#define JUCE_CORE_INCLUDE_JNI_HELPERS 1
 #include <ImageData.h>
 #include <app_configuration/app_configuration.h>
 #include <app_services/app_services.h>

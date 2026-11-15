@@ -177,12 +177,17 @@ class ExtendedUIBehaviour : public tracktion::UIBehaviour {
         }
 
         while (runner.isThreadRunning()) {
+#if JUCE_ANDROID || JUCE_IOS
+            // no nested message loops on phones: just wait
+            juce::Thread::sleep(10);
+#else
             if (!juce::MessageManager::getInstance()->runDispatchLoopUntil(
                     10)) {
                 // Can update the GUI here if we need to, but since its just a
                 // continuous loading animation we dont need to do anything for
                 // now
             }
+#endif
         }
 
         // Once the thread finishes, hide the progress view
