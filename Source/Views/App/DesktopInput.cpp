@@ -10,7 +10,6 @@ namespace {
 // keys on the row above.
 const char *lowerRow = "zsxdcfvbhnjm"; // F3 .. E4
 const char *upperRow = "q2w3e4rt6y7u"; // F4 .. E5
-constexpr int firstNote = 53;
 constexpr double repeatDelay = 0.35, repeatInterval = 0.06;
 
 juce::File helpShownMarker() {
@@ -103,9 +102,7 @@ class KeyboardHelp : public juce::Component {
 } // namespace
 
 //==============================================================================
-DesktopInput::DesktopInput(tracktion::Engine &e,
-                           app_services::MidiCommandManager &mcm)
-    : engine(e), midiCommandManager(mcm) {
+DesktopInput::DesktopInput(VirtualHardware &hw) : hardware(hw) {
     using KP = juce::KeyPress;
     buttons = {
         {KP::F1Key, false, MCM::TRACKS_BUTTON},
@@ -142,18 +139,6 @@ DesktopInput::~DesktopInput() {
     releaseEverything();
     if (window != nullptr)
         window->removeMouseListener(this);
-}
-
-void DesktopInput::createVirtualDevice(tracktion::Engine &engine) {
-    auto &dm = engine.getDeviceManager();
-    for (int i = 0; i < dm.getNumMidiInDevices(); i++)
-        if (auto d = dm.getMidiInDevice(i))
-            if (d->getName() == virtualDeviceName)
-                return; // remembered from an earlier run
-    auto result = dm.createVirtualMidiDevice(virtualDeviceName);
-    if (result.failed())
-        juce::Logger::writeToLog("Computer keyboard input: " +
-                                 result.getErrorMessage());
 }
 
 void DesktopInput::attachTo(juce::Component *newWindow) {
@@ -225,7 +210,7 @@ void DesktopInput::timerCallback() {
     bool shift = mods.isShiftDown();
     if (shift != controlDown) {
         controlDown = shift;
-        sendCC(MCM::CONTROL_BUTTON, shift ? 127 : 0);
+        hardware.setControl(shift);
     }
 
     for (auto &b : buttons) {
@@ -239,13 +224,8 @@ void DesktopInput::timerCallback() {
     // octave
     bool left = keyDown(juce::KeyPress::leftKey),
          right = keyDown(juce::KeyPress::rightKey);
-    if ((left && !octaveDownKey) || (right && !octaveUpKey)) {
-        int newOctave = juce::jlimit(-4, 4, octave + (right ? 1 : -1));
-        if (newOctave != octave) {
-            octave = newOctave;
-            sendCC(MCM::OCTAVE_CHANGE, octave + 4);
-        }
-    }
+    if ((left && !octaveDownKey) || (right && !octaveUpKey))
+        hardware.changeOctave(right ? 1 : -1);
     octaveDownKey = left;
     octaveUpKey = right;
 
@@ -294,40 +274,22 @@ void DesktopInput::timerCallback() {
 }
 
 void DesktopInput::sendCC(int cc, int value) {
-    midiCommandManager.midiMessageReceived(
-        juce::MidiMessage::controllerEvent(1, cc, value), virtualDeviceName);
+    hardware.button(cc, value != 0);
 }
 
 void DesktopInput::turnEncoder(int index, int direction) {
-    static const int ccs[] = {MCM::ENCODER_1, MCM::ENCODER_2, MCM::ENCODER_3,
-                              MCM::ENCODER_4};
-    sendCC(ccs[index], direction > 0 ? 1 : 127);
+    hardware.turnEncoder(index, direction);
 }
 
 void DesktopInput::pressEncoder(int index, bool down) {
-    static const int ccs[] = {MCM::ENCODER_1_BUTTON, MCM::ENCODER_2_BUTTON,
-                              MCM::ENCODER_3_BUTTON, MCM::ENCODER_4_BUTTON};
-    sendCC(ccs[index], down ? 127 : 0);
+    hardware.pressEncoder(index, down);
 }
 
 void DesktopInput::playNote(int index, bool down) {
-    int note = down ? juce::jlimit(0, 127, firstNote + index + 12 * octave)
-                    : notePlaying[size_t(index)];
     if (down)
-        notePlaying[size_t(index)] = note;
-
-    auto message = down ? juce::MidiMessage::noteOn(1, note, (juce::uint8)100)
-                        : juce::MidiMessage::noteOff(1, note);
-
-    auto &dm = engine.getDeviceManager();
-    for (int i = 0; i < dm.getNumMidiInDevices(); i++)
-        if (auto d = dm.getMidiInDevice(i))
-            if (d->getName() == virtualDeviceName)
-                d->handleIncomingMidiMessage(message);
-
-    // the screens use notes too (drum pads, sequencers, Tombola balls...)
-    if (down)
-        midiCommandManager.midiMessageReceived(message, virtualDeviceName);
+        notePlaying[size_t(index)] = hardware.noteOn(index);
+    else
+        hardware.noteOff(notePlaying[size_t(index)]);
 }
 
 void DesktopInput::releaseEverything() {
@@ -350,7 +312,7 @@ void DesktopInput::releaseEverything() {
     }
     if (controlDown) {
         controlDown = false;
-        sendCC(MCM::CONTROL_BUTTON, 0);
+        hardware.setControl(false);
     }
 }
 
@@ -374,6 +336,8 @@ int DesktopInput::stripEncoderAt(const juce::MouseEvent &e) const {
 
 void DesktopInput::mouseWheelMove(const juce::MouseEvent &e,
                                   const juce::MouseWheelDetails &wheel) {
+    if (!mouseEnabled)
+        return;
     if (help != nullptr && help->isVisible())
         return;
     int index = stripEncoderAt(e);
@@ -398,6 +362,8 @@ void DesktopInput::mouseWheelMove(const juce::MouseEvent &e,
 }
 
 void DesktopInput::mouseDown(const juce::MouseEvent &e) {
+    if (!mouseEnabled)
+        return;
     if (help != nullptr && help->isVisible())
         return; // the card closes itself
     mouseEncoder = stripEncoderAt(e);

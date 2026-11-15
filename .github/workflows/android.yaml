@@ -1,0 +1,77 @@
+name: Android build
+
+# Builds LMN-3.apk, the phone version with on-screen controls. Download it
+# from the run's "Artifacts" section, unzip it and open the .apk on the phone.
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # The JUCE version in this repo can only make Android projects with its
+      # Projucer tool, so build that first (cached between runs)
+      - name: Cache the Projucer
+        id: projucer-cache
+        uses: actions/cache@v4
+        with:
+          path: projucer-build/extras/Projucer/Projucer_artefacts/Release/Projucer
+          key: projucer-${{ runner.os }}-${{ hashFiles('tracktion_engine/modules/juce/extras/Projucer/**', 'tracktion_engine/modules/juce/modules/juce_core/system/juce_StandardHeader.h') }}
+
+      - name: Build the Projucer
+        if: steps.projucer-cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libcurl4-openssl-dev \
+            libfreetype6-dev libx11-dev libxcomposite-dev libxcursor-dev \
+            libxext-dev libxinerama-dev libxrandr-dev libxrender-dev \
+            libglu1-mesa-dev mesa-common-dev libgtk-3-dev
+          # The Projucer doesn't use its web browser (JUCE_WEB_BROWSER=0), and
+          # newer Ubuntu no longer has the webkit version it asks for
+          sed -i 's/NEEDS_WEB_BROWSER *TRUE/NEEDS_WEB_BROWSER FALSE/' \
+            tracktion_engine/modules/juce/extras/Projucer/CMakeLists.txt
+          cmake -S tracktion_engine/modules/juce -B projucer-build \
+            -DJUCE_BUILD_EXTRAS=ON -DCMAKE_BUILD_TYPE=Release \
+            "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
+          cmake --build projucer-build --target Projucer --parallel
+
+      - name: Write the Android Studio project
+        run: |
+          python3 Android/make_project.py
+          projucer-build/extras/Projucer/Projucer_artefacts/Release/Projucer \
+            --resave Android/LMN-3.jucer
+
+      - name: Build the app
+        working-directory: Android/Builds/Android
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease_Release
+
+      - name: Package
+        run: |
+          mkdir -p package
+          find Android/Builds/Android/app/build/outputs -name "*.apk" \
+            -exec cp {} package/LMN-3.apk \;
+          cp Android/README.txt package/README.txt
+          ls -la package
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LMN-3-android
+          path: package/
+          retention-days: 30

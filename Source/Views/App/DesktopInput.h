@@ -1,4 +1,5 @@
 #pragma once
+#include "VirtualHardware.h"
 #include <app_services/app_services.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <tracktion_engine/tracktion_engine.h>
@@ -18,15 +19,11 @@
 // once works the same as on the hardware, e.g. holding + and pressing a note.
 class DesktopInput : private juce::Timer, private juce::MouseListener {
   public:
-    static constexpr const char *virtualDeviceName = "Computer keyboard";
-
-    DesktopInput(tracktion::Engine &engine,
-                 app_services::MidiCommandManager &midiCommandManager);
+    explicit DesktopInput(VirtualHardware &hardware);
     ~DesktopInput() override;
 
-    // Creates the virtual MIDI input the note keys play into. Call once at
-    // start-up, before the edit's inputs are set up.
-    static void createVirtualDevice(tracktion::Engine &engine);
+    // Off when the on-screen touch controls handle the mouse
+    void setMouseEnabled(bool enabled) { mouseEnabled = enabled; }
 
     // The window to listen to (it is rebuilt when another project opens)
     void attachTo(juce::Component *window);
@@ -67,8 +64,7 @@ class DesktopInput : private juce::Timer, private juce::MouseListener {
     void hideHelp();
     void showHelpOnFirstRun();
 
-    tracktion::Engine &engine;
-    app_services::MidiCommandManager &midiCommandManager;
+    VirtualHardware &hardware;
     juce::Component::SafePointer<juce::Component> window;
     std::unique_ptr<juce::Component> help;
 
@@ -78,7 +74,7 @@ class DesktopInput : private juce::Timer, private juce::MouseListener {
     std::array<int, 24> notePlaying{};
     bool controlDown = false, octaveDownKey = false, octaveUpKey = false,
          helpKey = false, upKey = false, downKey = false;
-    int octave = 0;
+    bool mouseEnabled = true;
     std::array<float, 4> wheelAccumulator{};
     int mouseEncoder = -1;
 };

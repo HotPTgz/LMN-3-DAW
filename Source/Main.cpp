@@ -9,6 +9,8 @@
 #include "App.h"
 #include "DesktopInput.h"
 #include "ExtendedUIBehaviour.h"
+#include "TouchShell.h"
+#include "VirtualHardware.h"
 
 #include "AppLookAndFeel.h"
 
@@ -34,6 +36,9 @@ class GuiAppApplication : public juce::JUCEApplication {
         // This method is where you should put your application's initialisation
         // code..
         juce::ignoreUnused(commandLine);
+#if JUCE_ANDROID
+        linkDataFolderToSharedStorage();
+#endif
 
         // Create application wide file logger
         logger = std::unique_ptr<juce::FileLogger>(
@@ -87,25 +92,36 @@ class GuiAppApplication : public juce::JUCEApplication {
         app_view_models::KnobMaps::installDefaults(
             app_view_models::KnobMaps::getDirectory());
 
-        // Computer keyboard and mouse in place of the LMN-3 hardware: on by
-        // default on Windows and macOS, and on Linux when LMN3_KEYBOARD=1
-        bool useComputerKeyboard =
-#if JUCE_LINUX
-            juce::SystemStats::getEnvironmentVariable("LMN3_KEYBOARD", "") ==
-            "1";
+        // Without the LMN-3 hardware: the on-screen touch controls (Android,
+        // or LMN3_TOUCH=1) and the computer keyboard and mouse (Windows and
+        // macOS, or LMN3_KEYBOARD=1 on Linux)
+        auto env = [](const char *name) {
+            return juce::SystemStats::getEnvironmentVariable(name, "") == "1";
+        };
+#if JUCE_ANDROID
+        useTouch = true;
+        bool useComputerKeyboard = false;
+#elif JUCE_LINUX
+        useTouch = env("LMN3_TOUCH");
+        bool useComputerKeyboard = env("LMN3_KEYBOARD") || useTouch;
 #else
-            true;
+        useTouch = env("LMN3_TOUCH");
+        bool useComputerKeyboard = true;
 #endif
-        if (useComputerKeyboard)
-            DesktopInput::createVirtualDevice(engine);
+        if (useTouch || useComputerKeyboard)
+            VirtualHardware::createVirtualDevice(engine);
 
         loadEdit(projectManager->getStartupProject());
 
         midiCommandManager =
             std::make_unique<app_services::MidiCommandManager>(engine);
-        if (useComputerKeyboard)
-            desktopInput =
-                std::make_unique<DesktopInput>(engine, *midiCommandManager);
+        if (useTouch || useComputerKeyboard)
+            virtualHardware =
+                std::make_unique<VirtualHardware>(engine, *midiCommandManager);
+        if (useComputerKeyboard) {
+            desktopInput = std::make_unique<DesktopInput>(*virtualHardware);
+            desktopInput->setMouseEnabled(!useTouch);
+        }
 
         if (auto uiBehavior =
                 dynamic_cast<ExtendedUIBehaviour *>(&engine.getUIBehaviour())) {
@@ -117,9 +133,9 @@ class GuiAppApplication : public juce::JUCEApplication {
             [this](const juce::File &projectFile) { openProject(projectFile); };
 
         initialiseAudioDevices();
-        mainWindow =
-            std::make_unique<MainWindow>(getApplicationName(), engine, *edit,
-                                         *midiCommandManager, *projectManager);
+        mainWindow = std::make_unique<MainWindow>(
+            getApplicationName(), engine, *edit, *midiCommandManager,
+            *projectManager, useTouch ? virtualHardware.get() : nullptr);
         if (desktopInput != nullptr)
             desktopInput->attachTo(mainWindow.get());
         splash->deleteAfterDelay(juce::RelativeTime::seconds(4.25), false);
@@ -189,12 +205,46 @@ class GuiAppApplication : public juce::JUCEApplication {
         if (uiBehavior != nullptr)
             uiBehavior->setEdit(edit.get());
 
-        mainWindow =
-            std::make_unique<MainWindow>(getApplicationName(), engine, *edit,
-                                         *midiCommandManager, *projectManager);
+        mainWindow = std::make_unique<MainWindow>(
+            getApplicationName(), engine, *edit, *midiCommandManager,
+            *projectManager, useTouch ? virtualHardware.get() : nullptr);
         if (desktopInput != nullptr)
             desktopInput->attachTo(mainWindow.get());
     }
+
+#if JUCE_ANDROID
+    // The app's own data folder can't be reached from a computer, so the
+    // LMN-3 folder (projects, samples, drum kits, renders...) lives in the
+    // app's shared storage folder instead, and is linked from the data folder:
+    //   Android/data/com.fundamentalfrequency.lmn3/files/LMN-3
+    // (visible when the phone is plugged into a computer)
+    static void linkDataFolderToSharedStorage() {
+        auto link = juce::File::getSpecialLocation(
+                        juce::File::userApplicationDataDirectory)
+                        .getChildFile(JUCE_APPLICATION_NAME_STRING);
+        if (link.isSymbolicLink() || link.isDirectory())
+            return;
+
+        auto *env = juce::getEnv();
+        auto context = juce::getAppContext();
+        if (env == nullptr || context.get() == nullptr)
+            return;
+        auto contextClass = env->GetObjectClass(context.get());
+        auto getDir = env->GetMethodID(contextClass, "getExternalFilesDir",
+                                       "(Ljava/lang/String;)Ljava/io/File;");
+        auto dir = env->CallObjectMethod(context.get(), getDir, nullptr);
+        if (dir == nullptr)
+            return;
+        auto fileClass = env->GetObjectClass(dir);
+        auto getPath = env->GetMethodID(fileClass, "getAbsolutePath",
+                                        "()Ljava/lang/String;");
+        auto path = (jstring)env->CallObjectMethod(dir, getPath);
+        juce::File shared(juce::juceString(path));
+        auto target = shared.getChildFile(JUCE_APPLICATION_NAME_STRING);
+        if (target.createDirectory().wasOk())
+            target.createSymbolicLink(link, false);
+    }
+#endif
 
     void initialiseAudioDevices() {
         auto &deviceManager = engine.getDeviceManager().deviceManager;
@@ -242,7 +292,8 @@ class GuiAppApplication : public juce::JUCEApplication {
         explicit MainWindow(juce::String name, tracktion::Engine &e,
                             tracktion::Edit &ed,
                             app_services::MidiCommandManager &mcm,
-                            app_services::ProjectManager &pm)
+                            app_services::ProjectManager &pm,
+                            VirtualHardware *touchHardware)
             : DocumentWindow(
                   name,
                   juce::Desktop::getInstance()
@@ -262,11 +313,22 @@ class GuiAppApplication : public juce::JUCEApplication {
                 setTitleBarHeight(0);
             }
 
-            setContentOwned(new App(edit, midiCommandManager, projectManager),
-                            true);
+            auto app =
+                std::make_unique<App>(edit, midiCommandManager, projectManager);
+            appComponent = app.get();
+            if (touchHardware != nullptr) {
+                auto shell = std::make_unique<TouchShell>(std::move(app),
+                                                          *touchHardware);
+                shell->setSize(1280, 576); // a phone held sideways (20:9)
+                setContentOwned(shell.release(), true);
+            } else {
+                setContentOwned(app.release(), true);
+            }
 
 #if JUCE_IOS || JUCE_ANDROID
             setFullScreen(true);
+            // hide the phone's status and navigation bars
+            juce::Desktop::getInstance().setKioskModeComponent(this, false);
 #elif JUCE_LINUX
             setResizable(false, false);
             centreWithSize(getWidth(), getHeight());
@@ -283,9 +345,7 @@ class GuiAppApplication : public juce::JUCEApplication {
             // UIBehavior is used to show progress view
             if (auto uiBehavior = dynamic_cast<ExtendedUIBehaviour *>(
                     &engine.getUIBehaviour())) {
-                if (auto app = dynamic_cast<App *>(getContentComponent())) {
-                    uiBehavior->setApp(app);
-                }
+                uiBehavior->setApp(appComponent);
             }
             setVisible(true);
         }
@@ -310,6 +370,7 @@ class GuiAppApplication : public juce::JUCEApplication {
         tracktion::Edit &edit;
         app_services::MidiCommandManager &midiCommandManager;
         app_services::ProjectManager &projectManager;
+        App *appComponent = nullptr;
         juce::ValueTree state;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
@@ -322,7 +383,9 @@ class GuiAppApplication : public juce::JUCEApplication {
                              std::make_unique<ExtendedUIBehaviour>(), nullptr};
     std::unique_ptr<tracktion::Edit> edit;
     std::unique_ptr<app_services::MidiCommandManager> midiCommandManager;
+    std::unique_ptr<VirtualHardware> virtualHardware;
     std::unique_ptr<DesktopInput> desktopInput;
+    bool useTouch = false;
     std::unique_ptr<app_services::ProjectManager> projectManager;
     AppLookAndFeel appLookAndFeel;
     juce::SplashScreen *splash;

@@ -26,7 +26,7 @@ juce::Array<juce::File> getSearchFolders() {
         if (folder.isDirectory())
             folders.add(folder);
     }
-#else
+#elif JUCE_PLUGINHOST_VST3
     // Windows: C:\Program Files\Common Files\VST3 (and the Mac equivalents)
     auto defaults = juce::VST3PluginFormat().getDefaultLocationsToSearch();
     for (int i = 0; i < defaults.getNumPaths(); i++)
