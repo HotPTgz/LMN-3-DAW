@@ -133,7 +133,9 @@ jobs:
         if: always()
         run: |
           echo "== app process: $(cat running.txt)"
-          grep -E "FATAL|AndroidRuntime|DEBUG  |libc  |backtrace|#[0-9]+ pc|Abort|SIGSEGV|SIGABRT|JUCE|juce|tracktion|lmn3" logcat.txt | head -150 || true
+          grep -E "FATAL|AndroidRuntime|DEBUG  |libc  |backtrace|#[0-9]+ pc|SIGSEGV|SIGABRT|JUCE|juce|tracktion" logcat.txt | grep -v SearchServiceCore | head -150 || true
+          # fail the check if the app isn't running after 30 seconds
+          ! grep -q "not running" running.txt
 
       - uses: actions/upload-artifact@v4
         if: always()

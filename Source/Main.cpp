@@ -19,13 +19,17 @@
 
 class GuiAppApplication : public juce::JUCEApplication {
   public:
-    GuiAppApplication()
-        : splash(new juce::SplashScreen(
-              "Welcome to my app!",
-              juce::ImageFileFormat::loadFrom(
-                  ImageData::tracktion_engine_powered_png,
-                  ImageData::tracktion_engine_powered_pngSize),
-              true)) {}
+    GuiAppApplication() {
+#if !JUCE_ANDROID
+        // (on Android there is no window to show it in yet at this point)
+        splash = new juce::SplashScreen(
+            "Welcome to my app!",
+            juce::ImageFileFormat::loadFrom(
+                ImageData::tracktion_engine_powered_png,
+                ImageData::tracktion_engine_powered_pngSize),
+            true);
+#endif
+    }
 
     const juce::String getApplicationName() override {
         return JUCE_APPLICATION_NAME_STRING;
@@ -141,7 +145,8 @@ class GuiAppApplication : public juce::JUCEApplication {
             *projectManager, useTouch ? virtualHardware.get() : nullptr);
         if (desktopInput != nullptr)
             desktopInput->attachTo(mainWindow.get());
-        splash->deleteAfterDelay(juce::RelativeTime::seconds(4.25), false);
+        if (splash != nullptr)
+            splash->deleteAfterDelay(juce::RelativeTime::seconds(4.25), false);
     }
 
     // Loads (or creates, if it doesn't exist yet) the project and makes it
@@ -391,7 +396,7 @@ class GuiAppApplication : public juce::JUCEApplication {
     bool useTouch = false;
     std::unique_ptr<app_services::ProjectManager> projectManager;
     AppLookAndFeel appLookAndFeel;
-    juce::SplashScreen *splash;
+    juce::SplashScreen *splash = nullptr;
 };
 
 START_JUCE_APPLICATION(GuiAppApplication)
