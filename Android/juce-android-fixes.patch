@@ -1,8 +1,16 @@
 diff --git a/modules/juce_core/native/juce_android_JNIHelpers.cpp b/modules/juce_core/native/juce_android_JNIHelpers.cpp
-index 53734691..66ba414b 100644
+index 53734691..28ec92d5 100644
 --- a/modules/juce_core/native/juce_android_JNIHelpers.cpp
 +++ b/modules/juce_core/native/juce_android_JNIHelpers.cpp
-@@ -441,6 +441,11 @@ jobject ActivityLifecycleCallbacks::invoke (jobject proxy, jobject method, jobje
+@@ -415,6 +415,7 @@ jobject ActivityLifecycleCallbacks::invoke (jobject proxy, jobject method, jobje
+     auto* env = getEnv();
+ 
+     auto methodName = juceString ((jstring) env->CallObjectMethod (method, JavaMethod.getName));
++    __android_log_print (ANDROID_LOG_INFO, "LMN3-LIFECYCLE", "%s", methodName.toRawUTF8());
+ 
+     auto activity = env->GetArrayLength (args) > 0 ? env->GetObjectArrayElement (args, 0) : (jobject) nullptr;
+     auto bundle   = env->GetArrayLength (args) > 1 ? env->GetObjectArrayElement (args, 1) : (jobject) nullptr;
+@@ -441,6 +442,11 @@ jobject ActivityLifecycleCallbacks::invoke (jobject proxy, jobject method, jobje
      else if (methodName == "onActivityPostStarted")            { onActivityPostStarted (activity);                   return nullptr; }
      else if (methodName == "onActivityPostStopped")            { onActivityPostStopped (activity);                   return nullptr; }
  
@@ -12,5 +20,19 @@ index 53734691..66ba414b 100644
 +        return nullptr;
 +
      return AndroidInterfaceImplementer::invoke (proxy, method, args);
+ }
+ 
+diff --git a/modules/juce_events/messages/juce_ApplicationBase.cpp b/modules/juce_events/messages/juce_ApplicationBase.cpp
+index 6e6bc09c..eb293978 100644
+--- a/modules/juce_events/messages/juce_ApplicationBase.cpp
++++ b/modules/juce_events/messages/juce_ApplicationBase.cpp
+@@ -66,6 +66,9 @@ void JUCEApplicationBase::appWillTerminateByForce()
+ 
+ void JUCEApplicationBase::quit()
+ {
++   #if JUCE_ANDROID
++    Logger::outputDebugString ("JUCEApplicationBase::quit called");
++   #endif
+     MessageManager::getInstance()->stopDispatchLoop();
  }
  

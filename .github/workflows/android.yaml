@@ -157,7 +157,7 @@ jobs:
           echo "== everything the app process ($pid) logged:"
           grep -E "^\S+ \S+ +$pid " logcat.txt | grep -vE "PlayerBase|GraphicsEnvironment" | tail -150 || true
           echo "== system messages about the app:"
-          grep -E "ActivityManager|ActivityTaskManager|WindowManager" logcat.txt | grep -i lmn3 | tail -20 || true
+          grep -E "ActivityManager|ActivityTaskManager|WindowManager|ActivityThread" logcat.txt | grep -iE "lmn3|relaunch|config|destroy|finish" | tail -40 || true
           echo "== shared folder:"; cat shared.txt || true
           for f in screen.png screen2.png; do
             [ -f $f ] && echo "== $f base64:" && base64 $f
