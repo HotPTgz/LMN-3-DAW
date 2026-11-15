@@ -1,0 +1,16 @@
+diff --git a/modules/juce_core/native/juce_android_JNIHelpers.cpp b/modules/juce_core/native/juce_android_JNIHelpers.cpp
+index 53734691..66ba414b 100644
+--- a/modules/juce_core/native/juce_android_JNIHelpers.cpp
++++ b/modules/juce_core/native/juce_android_JNIHelpers.cpp
+@@ -441,6 +441,11 @@ jobject ActivityLifecycleCallbacks::invoke (jobject proxy, jobject method, jobje
+     else if (methodName == "onActivityPostStarted")            { onActivityPostStarted (activity);                   return nullptr; }
+     else if (methodName == "onActivityPostStopped")            { onActivityPostStopped (activity);                   return nullptr; }
+ 
++    // Newer Android versions add callbacks (e.g. onActivityConfigurationChanged
++    // in Android 14) that this JUCE version doesn't know: ignore them
++    if (methodName.startsWith ("onActivity"))
++        return nullptr;
++
+     return AndroidInterfaceImplementer::invoke (proxy, method, args);
+ }
+ 

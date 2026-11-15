@@ -75,6 +75,8 @@ jobs:
         env:
           LMN3_ABIS: ${{ matrix.abi }}
         run: |
+          # fixes for newer Android versions in the bundled (older) JUCE
+          git -C tracktion_engine/modules/juce apply ../../../Android/juce-android-fixes.patch
           python3 Android/make_project.py
           projucer-build/extras/Projucer/Projucer_artefacts/Release/Projucer \
             --resave Android/LMN-3.jucer
