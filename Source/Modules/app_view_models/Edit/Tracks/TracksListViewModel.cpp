@@ -32,6 +32,14 @@ TracksListViewModel::~TracksListViewModel() {
     edit.getTransport().removeListener(this);
 }
 
+// The LMN-3's own MIDI input, plus the "Computer keyboard" virtual input the
+// desktop build plays notes into
+static bool isPlayableMidiInput(tracktion::InputDevice &device) {
+    auto type = device.getDeviceType();
+    return type == tracktion::InputDevice::physicalMidiDevice ||
+           type == tracktion::InputDevice::virtualMidiDevice;
+}
+
 void TracksListViewModel::initialiseInputs() {
     // set initial midi devices
     auto &deviceManager = edit.engine.getDeviceManager();
@@ -45,8 +53,7 @@ void TracksListViewModel::initialiseInputs() {
     edit.getTransport().ensureContextAllocated();
 
     for (auto instance : edit.getAllInputDevices()) {
-        if (instance->getInputDevice().getDeviceType() ==
-            tracktion::InputDevice::physicalMidiDevice) {
+        if (isPlayableMidiInput(instance->getInputDevice())) {
             if (auto selectedTrack = dynamic_cast<tracktion::AudioTrack *>(
                     listViewModel.getSelectedItem())) {
                 instance->setTargetTrack(*selectedTrack, 0, true);
@@ -576,8 +583,7 @@ void TracksListViewModel::handleAsyncUpdate() {
 
 void TracksListViewModel::selectedIndexChanged(int newIndex) {
     for (auto instance : edit.getAllInputDevices()) {
-        if (instance->getInputDevice().getDeviceType() ==
-            tracktion::InputDevice::physicalMidiDevice) {
+        if (isPlayableMidiInput(instance->getInputDevice())) {
             if (auto selectedTrack = dynamic_cast<tracktion::AudioTrack *>(
                     listViewModel.getSelectedItem())) {
                 instance->setTargetTrack(*selectedTrack, 0, true);

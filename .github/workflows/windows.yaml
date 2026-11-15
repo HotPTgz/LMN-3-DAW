@@ -1,0 +1,40 @@
+name: Windows build
+
+# Builds LMN-3.exe, the desktop version you play with the computer keyboard
+# and mouse. Download it from the run's "Artifacts" section.
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure
+        run: cmake -S . -B build -A x64 -DPACKAGE_TESTS=OFF
+
+      - name: Build
+        run: cmake --build build --config Release --target LMN-3 --parallel
+
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force package | Out-Null
+          Copy-Item build/LMN-3_artefacts/Release/LMN-3.exe package/
+          Copy-Item Windows-README.txt package/README.txt
+          Get-ChildItem package
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LMN-3-windows
+          path: package/
+          retention-days: 30

@@ -172,8 +172,9 @@ class MidiCommandManager : private juce::MidiInputCallback {
 
     static juce::String getMidiMessageDescription(const juce::MidiMessage &m);
 
-    static constexpr int encoder1 = 3;
-    // Midi mapping
+  public:
+    // Midi mapping (the CC numbers the LMN-3 hardware sends; the computer
+    // keyboard layer sends the same ones)
     static constexpr int ENCODER_1 = 3;
     static constexpr int ENCODER_2 = 9;
     static constexpr int ENCODER_3 = 14;

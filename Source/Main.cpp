@@ -4,9 +4,10 @@
 #include <internal_plugins/internal_plugins.h>
 #include <memory>
 #include <tracktion_engine/tracktion_engine.h>
-//#include <SynthSampleData.h>
-//#include <DrumSampleData.h>
+// #include <SynthSampleData.h>
+// #include <DrumSampleData.h>
 #include "App.h"
+#include "DesktopInput.h"
 #include "ExtendedUIBehaviour.h"
 
 #include "AppLookAndFeel.h"
@@ -86,10 +87,25 @@ class GuiAppApplication : public juce::JUCEApplication {
         app_view_models::KnobMaps::installDefaults(
             app_view_models::KnobMaps::getDirectory());
 
+        // Computer keyboard and mouse in place of the LMN-3 hardware: on by
+        // default on Windows and macOS, and on Linux when LMN3_KEYBOARD=1
+        bool useComputerKeyboard =
+#if JUCE_LINUX
+            juce::SystemStats::getEnvironmentVariable("LMN3_KEYBOARD", "") ==
+            "1";
+#else
+            true;
+#endif
+        if (useComputerKeyboard)
+            DesktopInput::createVirtualDevice(engine);
+
         loadEdit(projectManager->getStartupProject());
 
         midiCommandManager =
             std::make_unique<app_services::MidiCommandManager>(engine);
+        if (useComputerKeyboard)
+            desktopInput =
+                std::make_unique<DesktopInput>(engine, *midiCommandManager);
 
         if (auto uiBehavior =
                 dynamic_cast<ExtendedUIBehaviour *>(&engine.getUIBehaviour())) {
@@ -104,6 +120,8 @@ class GuiAppApplication : public juce::JUCEApplication {
         mainWindow =
             std::make_unique<MainWindow>(getApplicationName(), engine, *edit,
                                          *midiCommandManager, *projectManager);
+        if (desktopInput != nullptr)
+            desktopInput->attachTo(mainWindow.get());
         splash->deleteAfterDelay(juce::RelativeTime::seconds(4.25), false);
     }
 
@@ -174,6 +192,8 @@ class GuiAppApplication : public juce::JUCEApplication {
         mainWindow =
             std::make_unique<MainWindow>(getApplicationName(), engine, *edit,
                                          *midiCommandManager, *projectManager);
+        if (desktopInput != nullptr)
+            desktopInput->attachTo(mainWindow.get());
     }
 
     void initialiseAudioDevices() {
@@ -199,6 +219,7 @@ class GuiAppApplication : public juce::JUCEApplication {
                                          .getFullPathName());
         }
         juce::Logger::setCurrentLogger(nullptr);
+        desktopInput = nullptr;
         mainWindow = nullptr; // (deletes our window)
     }
 
@@ -246,8 +267,17 @@ class GuiAppApplication : public juce::JUCEApplication {
 
 #if JUCE_IOS || JUCE_ANDROID
             setFullScreen(true);
-#else
+#elif JUCE_LINUX
             setResizable(false, false);
+            centreWithSize(getWidth(), getHeight());
+#else
+            // On a computer the window can be made bigger (the screens scale
+            // with it), keeping the LMN-3 screen's shape
+            setResizable(true, true);
+            setResizeLimits(getWidth(), getHeight(), getWidth() * 4,
+                            getHeight() * 4);
+            getConstrainer()->setFixedAspectRatio(double(getWidth()) /
+                                                  getHeight());
             centreWithSize(getWidth(), getHeight());
 #endif
             // UIBehavior is used to show progress view
@@ -292,6 +322,7 @@ class GuiAppApplication : public juce::JUCEApplication {
                              std::make_unique<ExtendedUIBehaviour>(), nullptr};
     std::unique_ptr<tracktion::Edit> edit;
     std::unique_ptr<app_services::MidiCommandManager> midiCommandManager;
+    std::unique_ptr<DesktopInput> desktopInput;
     std::unique_ptr<app_services::ProjectManager> projectManager;
     AppLookAndFeel appLookAndFeel;
     juce::SplashScreen *splash;

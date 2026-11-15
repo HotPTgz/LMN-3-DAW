@@ -3,6 +3,12 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 project(LMN-3 VERSION 0.1.1)
 
+if(MSVC)
+    # The sources are UTF-8 (the screens use characters like the middle dot),
+    # Tracktion's unity files are large, and builds go faster in parallel
+    add_compile_options(/utf-8 /bigobj /MP)
+endif()
+
 add_subdirectory(yaml-cpp)
 add_subdirectory(tracktion_engine/modules/juce)
 add_subdirectory(Plugins)
@@ -29,6 +35,7 @@ target_sources(LMN-3  PRIVATE
     Source/Main.cpp
     Source/Views/App/App.cpp
     Source/Views/App/MessageBox.cpp
+    Source/Views/App/DesktopInput.cpp
     Source/Views/App/ControlButtonIndicator.cpp
     Source/Views/App/ProgressView/ProgressView.cpp
     Source/Views/App/ProgressView/SVGImageComponent.cpp
@@ -207,7 +214,7 @@ target_link_libraries(LMN-3
         FontData
     #    SynthSampleData
     #    DrumSampleData
-        atomic
+        $<$<PLATFORM_ID:Linux>:atomic>
         yaml-cpp
     PUBLIC
         juce::juce_recommended_config_flags

@@ -61,7 +61,7 @@ target_link_libraries(Tests PRIVATE
         app_models
         app_view_models
         app_configuration
-        atomic
+        $<$<PLATFORM_ID:Linux>:atomic>
         yaml-cpp
 )
 

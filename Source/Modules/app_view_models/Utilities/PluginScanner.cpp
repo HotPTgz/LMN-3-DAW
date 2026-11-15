@@ -16,6 +16,7 @@ juce::File getAppDataFolder() {
 
 juce::Array<juce::File> getSearchFolders() {
     juce::Array<juce::File> folders;
+#if JUCE_LINUX
     auto home = juce::File::getSpecialLocation(juce::File::userHomeDirectory);
     auto userFolder = home.getChildFile(".vst3");
     userFolder.createDirectory();
@@ -25,6 +26,13 @@ juce::Array<juce::File> getSearchFolders() {
         if (folder.isDirectory())
             folders.add(folder);
     }
+#else
+    // Windows: C:\Program Files\Common Files\VST3 (and the Mac equivalents)
+    auto defaults = juce::VST3PluginFormat().getDefaultLocationsToSearch();
+    for (int i = 0; i < defaults.getNumPaths(); i++)
+        if (defaults[i].isDirectory())
+            folders.add(defaults[i]);
+#endif
     return folders;
 }
 

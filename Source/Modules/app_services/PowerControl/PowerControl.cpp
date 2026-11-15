@@ -15,6 +15,14 @@ juce::StringArray getPowerOffCommands() {
 }
 
 bool powerOff() {
+#if !JUCE_LINUX
+    // On a Windows or Mac computer "power off" just closes the LMN-3 app
+    juce::MessageManager::callAsync([] {
+        if (auto *app = juce::JUCEApplicationBase::getInstance())
+            app->systemRequestedQuit();
+    });
+    return true;
+#endif
     for (auto command : getPowerOffCommands()) {
         juce::Logger::writeToLog("Power off: trying \"" + command + "\"");
         juce::ChildProcess process;
