@@ -135,7 +135,7 @@ jucer = f'''<?xml version="1.0" encoding="UTF-8"?>
 {modules}
   </MODULES>
   <JUCEOPTIONS JUCE_PLUGINHOST_VST3="0" JUCE_PLUGINHOST_AU="0" JUCE_WEB_BROWSER="0"
-               JUCE_USE_CURL="0" JUCE_USE_ANDROID_OBOE="1" JUCE_STRICT_REFCOUNTEDPOINTER="1"/>
+               JUCE_USE_CURL="0" JUCE_USE_ANDROID_OBOE="1"/>
   <EXPORTFORMATS>
     <ANDROIDSTUDIO targetFolder="Builds/Android" androidMinimumSDK="26" androidTargetSDK="33"
                    androidScreenOrientation="landscape" androidInternetNeeded="0"
