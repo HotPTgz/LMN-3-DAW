@@ -54,9 +54,6 @@ class GuiAppApplication : public juce::JUCEApplication {
         // This method is where you should put your application's initialisation
         // code..
         juce::ignoreUnused(commandLine);
-#if JUCE_ANDROID
-        linkDataFolderToSharedStorage();
-#endif
 
         // Create application wide file logger
         logger = std::unique_ptr<juce::FileLogger>(
@@ -243,31 +240,40 @@ class GuiAppApplication : public juce::JUCEApplication {
     // app's shared storage folder instead, and is linked from the data folder:
     //   Android/data/com.fundamentalfrequency.lmn3/files/LMN-3
     // (visible when the phone is plugged into a computer)
-    static void linkDataFolderToSharedStorage() {
+    static bool linkDataFolderToSharedStorage() {
         auto link = juce::File::getSpecialLocation(
                         juce::File::userApplicationDataDirectory)
                         .getChildFile(JUCE_APPLICATION_NAME_STRING);
-        if (link.isSymbolicLink() || link.isDirectory())
-            return;
+        if (link.isSymbolicLink())
+            return true;
 
         auto *env = juce::getEnv();
         auto context = juce::getAppContext();
         if (env == nullptr || context.get() == nullptr)
-            return;
+            return false;
         auto contextClass = env->GetObjectClass(context.get());
         auto getDir = env->GetMethodID(contextClass, "getExternalFilesDir",
                                        "(Ljava/lang/String;)Ljava/io/File;");
         auto dir = env->CallObjectMethod(context.get(), getDir, nullptr);
         if (dir == nullptr)
-            return;
+            return false;
         auto fileClass = env->GetObjectClass(dir);
         auto getPath = env->GetMethodID(fileClass, "getAbsolutePath",
                                         "()Ljava/lang/String;");
         auto path = (jstring)env->CallObjectMethod(dir, getPath);
         juce::File shared(juce::juceString(path));
         auto target = shared.getChildFile(JUCE_APPLICATION_NAME_STRING);
-        if (target.createDirectory().wasOk())
-            target.createSymbolicLink(link, false);
+        if (!target.createDirectory().wasOk())
+            return false;
+
+        // an earlier version kept the folder in the private data folder:
+        // move what's there
+        if (link.isDirectory()) {
+            if (!link.copyDirectoryTo(target))
+                return false;
+            link.deleteRecursively();
+        }
+        return target.createSymbolicLink(link, false);
     }
 #endif
 
@@ -404,6 +410,10 @@ class GuiAppApplication : public juce::JUCEApplication {
     };
 
   private:
+#if JUCE_ANDROID
+    // before the engine, which writes its settings into the folder
+    bool dataFolderLinked = linkDataFolderToSharedStorage();
+#endif
     std::unique_ptr<juce::FileLogger> logger;
 #if JUCE_ANDROID
     std::unique_ptr<juce::Logger> androidLogger;
