@@ -9,12 +9,24 @@ Gradle project in Android/Builds/Android.
 
     python3 Android/make_project.py
     Projucer --resave Android/LMN-3.jucer
+    python3 Android/make_project.py --fix-up
 """
-import pathlib, re, hashlib, os
+import pathlib, re, hashlib, os, sys
 from xml.sax.saxutils import quoteattr
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 HERE = ROOT / "Android"
+
+if "--fix-up" in sys.argv:
+    # The Projucer adds 32-bit ARM flags to every Android build; the NDK's
+    # CMake refuses them for 64-bit phones
+    gradle = HERE / "Builds/Android/app/build.gradle"
+    text = gradle.read_text()
+    for flag in ['"-DANDROID_ARM_MODE=arm"', '"-DANDROID_ARM_NEON=TRUE"']:
+        text = text.replace(", " + flag, "").replace(flag + ", ", "")
+    gradle.write_text(text)
+    print("fixed up", gradle)
+    sys.exit(0)
 GEN = HERE / "Generated"
 cmake = (ROOT / "CMakeLists.txt").read_text()
 

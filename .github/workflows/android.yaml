@@ -55,6 +55,7 @@ jobs:
           python3 Android/make_project.py
           projucer-build/extras/Projucer/Projucer_artefacts/Release/Projucer \
             --resave Android/LMN-3.jucer
+          python3 Android/make_project.py --fix-up
 
       - name: Build the app
         working-directory: Android/Builds/Android
