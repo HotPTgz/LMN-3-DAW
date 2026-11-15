@@ -19,12 +19,12 @@
 
 #if JUCE_ANDROID
 struct TeeLogger : juce::Logger {
-    explicit TeeLogger(juce::Logger &f) : file(f) {}
+    explicit TeeLogger(juce::FileLogger &f) : file(f) {}
     void logMessage(const juce::String &message) override {
         file.logMessage(message);
         juce::Logger::outputDebugString("LMN-3: " + message);
     }
-    juce::Logger &file;
+    juce::FileLogger &file;
 };
 #endif
 
