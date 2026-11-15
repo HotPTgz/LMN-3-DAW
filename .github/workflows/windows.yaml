@@ -20,7 +20,8 @@ jobs:
           submodules: recursive
 
       - name: Configure
-        run: cmake -S . -B build -A x64 -DPACKAGE_TESTS=OFF
+        # CMake 4 refuses the old minimum version in the yaml-cpp submodule
+        run: cmake -S . -B build -A x64 -DPACKAGE_TESTS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5
 
       - name: Build
         run: cmake --build build --config Release --target LMN-3 --parallel
