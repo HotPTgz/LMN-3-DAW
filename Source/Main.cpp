@@ -18,6 +18,8 @@
 #include "AppLookAndFeel.h"
 
 #if JUCE_ANDROID
+#include <unistd.h>
+
 struct TeeLogger : juce::Logger {
     explicit TeeLogger(juce::FileLogger &f) : file(f) {}
     void logMessage(const juce::String &message) override {
@@ -273,7 +275,9 @@ class GuiAppApplication : public juce::JUCEApplication {
                 return false;
             link.deleteRecursively();
         }
-        return target.createSymbolicLink(link, false);
+        // (JUCE's File::createSymbolicLink does nothing on Android)
+        return symlink(target.getFullPathName().toRawUTF8(),
+                       link.getFullPathName().toRawUTF8()) == 0;
     }
 #endif
 
