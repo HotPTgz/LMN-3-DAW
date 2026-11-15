@@ -132,14 +132,19 @@ jobs:
           api-level: 34
           arch: x86_64
           target: google_apis
+          profile: pixel_6
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           script: |
             adb install -r package/LMN-3.apk
             adb logcat -c
             adb shell am start -W -n com.fundamentalfrequency.lmn3/android.app.Activity || true
             sleep 30
-            adb shell pidof com.fundamentalfrequency.lmn3 > running.txt || echo "not running" > running.txt
             adb shell screencap -p /sdcard/screen.png && adb pull /sdcard/screen.png screen.png || true
+            adb shell input tap 2240 760 && sleep 1 && adb shell input tap 2240 760 && sleep 2 || true
+            adb shell input swipe 400 940 900 940 600 && sleep 2 || true
+            adb shell screencap -p /sdcard/screen2.png && adb pull /sdcard/screen2.png screen2.png || true
+            adb shell pidof com.fundamentalfrequency.lmn3 > running.txt || echo "not running" > running.txt
+            adb shell ls -la /sdcard/Android/data/com.fundamentalfrequency.lmn3/files/LMN-3 > shared.txt 2>&1 || true
             adb logcat -d > logcat.txt || true
 
       - name: Show the crash, if any
@@ -151,6 +156,10 @@ jobs:
           grep -E "^\S+ \S+ +$pid " logcat.txt | grep -vE "PlayerBase|GraphicsEnvironment" | tail -150 || true
           echo "== system messages about the app:"
           grep -E "ActivityManager|ActivityTaskManager|WindowManager" logcat.txt | grep -i lmn3 | tail -20 || true
+          echo "== shared folder:"; cat shared.txt || true
+          for f in screen.png screen2.png; do
+            [ -f $f ] && echo "== $f base64:" && base64 -w 0 $f && echo
+          done
           echo "== crash lines:"
           grep -E "FATAL|AndroidRuntime|DEBUG  |libc  |backtrace|#[0-9]+ pc|SIGSEGV|SIGABRT|JUCE|juce|tracktion" logcat.txt | grep -v SearchServiceCore | head -150 || true
           # fail the check if the app isn't running after 30 seconds
@@ -164,4 +173,5 @@ jobs:
             logcat.txt
             running.txt
             screen.png
+            screen2.png
           retention-days: 7

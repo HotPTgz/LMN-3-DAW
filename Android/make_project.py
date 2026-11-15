@@ -25,7 +25,19 @@ if "--fix-up" in sys.argv:
     for flag in ['"-DANDROID_ARM_MODE=arm"', '"-DANDROID_ARM_NEON=TRUE"']:
         text = text.replace(", " + flag, "").replace(flag + ", ", "")
     gradle.write_text(text)
-    print("fixed up", gradle)
+
+    # Turning the phone sideways also changes the screen's size class and
+    # layout; unless the app says it handles those itself, Android closes the
+    # window and opens a new one, and JUCE treats a closed window as the app
+    # being closed
+    manifest = HERE / "Builds/Android/app/src/main/AndroidManifest.xml"
+    text = manifest.read_text()
+    text = text.replace('android:configChanges="keyboardHidden|orientation|screenSize"',
+                        'android:configChanges="keyboard|keyboardHidden|navigation|'
+                        'orientation|screenSize|smallestScreenSize|screenLayout|'
+                        'density|uiMode"')
+    manifest.write_text(text)
+    print("fixed up", gradle, "and", manifest)
     sys.exit(0)
 GEN = HERE / "Generated"
 cmake = (ROOT / "CMakeLists.txt").read_text()
