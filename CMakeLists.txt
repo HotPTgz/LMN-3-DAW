@@ -144,6 +144,7 @@ target_include_directories(LMN-3  PUBLIC
 )
 
 target_compile_definitions(LMN-3  PRIVATE
+    YAML_CPP_STATIC_DEFINE # yaml-cpp is built as a static library (matters on Windows)
     JUCE_MODAL_LOOPS_PERMITTED=1 # For Tracktion Engine
     TRACKTION_ENABLE_TIMESTRETCH_SOUNDTOUCH=1 # Needed by the Pitch Shift effect
     JUCE_PLUGINHOST_VST3=1

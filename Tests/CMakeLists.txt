@@ -47,6 +47,7 @@ target_sources(Tests PRIVATE
 )
 
 target_compile_definitions(Tests PRIVATE
+        YAML_CPP_STATIC_DEFINE
         JUCE_UNIT_TESTS=0
         JUCE_USE_CURL=0
         JUCE_WEB_BROWSER=0
