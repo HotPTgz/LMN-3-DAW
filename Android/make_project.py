@@ -119,7 +119,8 @@ paths = "\n".join(f'        <MODULEPATH id="{m}" path={quoteattr(p)}/>'
                   for m, p in module_paths.items())
 version = re.search(r"project\(LMN-3 VERSION ([0-9.]+)\)", cmake).group(1)
 
-keystore = "${keystore}"
+# LMN3_ABIS=x86_64 builds for the emulator used to test the app
+abis = os.environ.get("LMN3_ABIS", "arm64-v8a")
 jucer = f'''<?xml version="1.0" encoding="UTF-8"?>
 <JUCERPROJECT id="LmN3aNd" name="LMN-3" projectType="guiapp" version="{version}"
               bundleIdentifier="com.fundamentalfrequency.lmn3" companyName="LMN-3"
@@ -147,9 +148,9 @@ jucer = f'''<?xml version="1.0" encoding="UTF-8"?>
                    androidKeyAlias="lmn3" androidKeyAliasPass="lmn3lmn3"
                    extraCompilerFlags="-Wno-everything">
       <CONFIGURATIONS>
-        <CONFIGURATION name="Debug" isDebug="1" androidArchitectures="arm64-v8a" optimisation="1"
+        <CONFIGURATION name="Debug" isDebug="1" androidArchitectures="{abis}" optimisation="1"
                        headerPath={quoteattr(chr(10).join(includes))}/>
-        <CONFIGURATION name="Release" isDebug="0" androidArchitectures="arm64-v8a" optimisation="3"
+        <CONFIGURATION name="Release" isDebug="0" androidArchitectures="{abis}" optimisation="3"
                        headerPath={quoteattr(chr(10).join(includes))}/>
       </CONFIGURATIONS>
       <MODULEPATHS>

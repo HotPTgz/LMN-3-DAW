@@ -1,7 +1,10 @@
 name: Android build
 
-# Builds LMN-3.apk, the phone version with on-screen controls. Download it
-# from the run's "Artifacts" section, unzip it and open the .apk on the phone.
+# Builds LMN-3.apk, the phone version with on-screen controls. Download
+# "LMN-3-android" from the run's "Artifacts" section, unzip it and open the
+# .apk on the phone. A second build (for a PC's processor) is started on an
+# Android emulator to check that the app opens; its log is kept as
+# "emulator-test".
 on:
   push:
   workflow_dispatch:
@@ -14,6 +17,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    strategy:
+      matrix:
+        include:
+          - abi: arm64-v8a
+            artifact: LMN-3-android
+          - abi: x86_64
+            artifact: LMN-3-android-emulator
     steps:
       - uses: actions/checkout@v4
         with:
@@ -51,6 +61,8 @@ jobs:
           cmake --build projucer-build --target Projucer --parallel
 
       - name: Write the Android Studio project
+        env:
+          LMN3_ABIS: ${{ matrix.abi }}
         run: |
           python3 Android/make_project.py
           projucer-build/extras/Projucer/Projucer_artefacts/Release/Projucer \
@@ -81,6 +93,54 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: LMN-3-android
+          name: ${{ matrix.artifact }}
           path: package/
           retention-days: 30
+
+  emulator-test:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: LMN-3-android-emulator
+          path: package
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Open the app on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          script: |
+            adb install -r package/LMN-3.apk
+            adb logcat -c
+            adb shell am start -W -n com.fundamentalfrequency.lmn3/android.app.Activity || true
+            sleep 30
+            adb shell pidof com.fundamentalfrequency.lmn3 > running.txt || echo "not running" > running.txt
+            adb shell screencap -p /sdcard/screen.png && adb pull /sdcard/screen.png screen.png || true
+            adb logcat -d > logcat.txt || true
+
+      - name: Show the crash, if any
+        if: always()
+        run: |
+          echo "== app process: $(cat running.txt)"
+          grep -E "FATAL|AndroidRuntime|DEBUG  |libc  |backtrace|#[0-9]+ pc|Abort|SIGSEGV|SIGABRT|JUCE|juce|tracktion|lmn3" logcat.txt | head -150 || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: emulator-test
+          path: |
+            logcat.txt
+            running.txt
+            screen.png
+          retention-days: 7
