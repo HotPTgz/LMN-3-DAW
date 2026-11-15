@@ -159,8 +159,8 @@ jobs:
           echo "== system messages about the app:"
           grep -E "ActivityManager|ActivityTaskManager|WindowManager|ActivityThread" logcat.txt | grep -iE "lmn3|relaunch|config|destroy|finish" | tail -40 || true
           echo "== system log around the moment the window was closed:"
-          t=$(grep -m1 "LMN3-LIFECYCLE: onActivityPrePaused" logcat.txt | awk '{print $2}' | cut -c1-7)
-          [ -n "$t" ] && grep -E "^\S+ $t" logcat.txt | grep -vE "SearchServiceCore|AudioStream|AAudio|Oboe|LMN3-LIFECYCLE|PlayerBase" | cut -c1-300 | head -120 || true
+          t=$(grep -m1 "LMN3-LIFECYCLE: onActivityPrePaused" logcat.txt | awk '{print $2}' | cut -c1-8)
+          [ -n "$t" ] && grep -E "^\S+ $t" logcat.txt | grep -vE "SearchServiceCore|AudioStream|AAudio|Oboe|LMN3-LIFECYCLE|PlayerBase" | cut -c1-300 | head -200 || true
           echo "== shared folder:"; cat shared.txt || true
           for f in screen.png screen2.png; do
             [ -f $f ] && echo "== $f base64:" && base64 $f
