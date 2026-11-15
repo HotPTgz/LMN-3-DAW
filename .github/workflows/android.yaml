@@ -138,45 +138,39 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           script: |
             adb install -r package/LMN-3.apk
-            adb logcat -c
-            adb shell am start -W -n com.fundamentalfrequency.lmn3/android.app.Activity || true
-            sleep 30
+            for i in 1 2 3; do adb shell am force-stop com.fundamentalfrequency.lmn3; adb logcat -c; adb shell am start -W -n com.fundamentalfrequency.lmn3/android.app.Activity; sleep 20; adb shell pidof com.fundamentalfrequency.lmn3 > running$i.txt || echo "not running" > running$i.txt; adb logcat -d > logcat$i.txt; done
             adb shell screencap -p /sdcard/screen.png && adb pull /sdcard/screen.png screen.png || true
             adb shell input tap 2240 760 && sleep 1 && adb shell input tap 2240 760 && sleep 2 || true
             adb shell input swipe 400 940 900 940 600 && sleep 2 || true
             adb shell screencap -p /sdcard/screen2.png && adb pull /sdcard/screen2.png screen2.png || true
-            adb shell pidof com.fundamentalfrequency.lmn3 > running.txt || echo "not running" > running.txt
             adb shell ls -la /sdcard/Android/data/com.fundamentalfrequency.lmn3/files/ /sdcard/Android/data/com.fundamentalfrequency.lmn3/files/LMN-3/ > shared.txt 2>&1 || true
-            adb logcat -d > logcat.txt || true
 
       - name: Show the crash, if any
         if: always()
         run: |
-          echo "== app process: $(cat running.txt)"
-          pid=$(grep -oE "Start proc [0-9]+:com.fundamentalfrequency.lmn3" logcat.txt | head -1 | grep -oE "[0-9]+" | head -1)
-          echo "== everything the app process ($pid) logged:"
-          grep -E "^\S+ \S+ +$pid " logcat.txt | grep -vE "PlayerBase|GraphicsEnvironment" | tail -150 || true
-          echo "== system messages about the app:"
-          grep -E "ActivityManager|ActivityTaskManager|WindowManager|ActivityThread" logcat.txt | grep -iE "lmn3|relaunch|config|destroy|finish" | tail -40 || true
-          echo "== system log around the moment the window was closed:"
-          t=$(grep -m1 "LMN3-LIFECYCLE: onActivityPrePaused" logcat.txt | awk '{print $2}' | cut -c1-8)
-          [ -n "$t" ] && grep -E "^\S+ $t" logcat.txt | grep -vE "SearchServiceCore|AudioStream|AAudio|Oboe|LMN3-LIFECYCLE|PlayerBase" | cut -c1-300 | head -200 || true
+          failed=0
+          for i in 1 2 3; do
+            echo "=== attempt $i: app process: $(cat running$i.txt)"
+            grep -q "not running" running$i.txt || continue
+            failed=1
+            echo "== lifecycle and app log:"
+            grep -E "LMN3-LIFECYCLE|LMN-3: |quit called|AndroidRuntime|F libc|F DEBUG" logcat$i.txt | cut -c1-200 | head -80 || true
+            echo "== system log in the second the window was closed:"
+            t=$(grep -m1 "LMN3-LIFECYCLE: onActivityPrePaused" logcat$i.txt | awk '{print $2}' | cut -c1-8)
+            [ -n "$t" ] && grep -E "^\S+ $t" logcat$i.txt | grep -vE "SearchServiceCore|AudioStream|AAudio|Oboe|LMN3-LIFECYCLE|PlayerBase" | cut -c1-300 | head -200 || true
+          done
           echo "== shared folder:"; cat shared.txt || true
           for f in screen.png screen2.png; do
             [ -f $f ] && echo "== $f base64:" && base64 $f
           done
-          echo "== crash lines:"
-          grep -E "FATAL|AndroidRuntime|DEBUG  |libc  |backtrace|#[0-9]+ pc|SIGSEGV|SIGABRT|JUCE|juce|tracktion" logcat.txt | grep -v SearchServiceCore | head -150 || true
-          # fail the check if the app isn't running after 30 seconds
-          ! grep -q "not running" running.txt
+          exit $failed
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: emulator-test
           path: |
-            logcat.txt
-            running.txt
-            screen.png
-            screen2.png
+            logcat*.txt
+            running*.txt
+            screen*.png
           retention-days: 7
