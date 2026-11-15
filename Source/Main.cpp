@@ -17,6 +17,17 @@
 
 #include "AppLookAndFeel.h"
 
+#if JUCE_ANDROID
+struct TeeLogger : juce::Logger {
+    explicit TeeLogger(juce::Logger &f) : file(f) {}
+    void logMessage(const juce::String &message) override {
+        file.logMessage(message);
+        juce::Logger::outputDebugString("LMN-3: " + message);
+    }
+    juce::Logger &file;
+};
+#endif
+
 class GuiAppApplication : public juce::JUCEApplication {
   public:
     GuiAppApplication() {
@@ -52,7 +63,13 @@ class GuiAppApplication : public juce::JUCEApplication {
             juce::FileLogger::createDefaultAppLogger(
                 getApplicationName(), "log.txt",
                 getApplicationName() + " Logs"));
+#if JUCE_ANDROID
+        // also copy the log to Android's system log (adb logcat)
+        androidLogger = std::make_unique<TeeLogger>(*logger);
+        juce::Logger::setCurrentLogger(androidLogger.get());
+#else
         juce::Logger::setCurrentLogger(logger.get());
+#endif
 
         // we need to add the app internal plugins to the cache:
         engine.getPluginManager()
@@ -265,6 +282,7 @@ class GuiAppApplication : public juce::JUCEApplication {
     }
 
     void shutdown() override {
+        juce::Logger::writeToLog("Shutting down");
         // Add your application's shutdown code here..
 
         bool success = edit->engine.getTemporaryFileManager()
@@ -282,6 +300,7 @@ class GuiAppApplication : public juce::JUCEApplication {
     }
 
     void systemRequestedQuit() override {
+        juce::Logger::writeToLog("Quit requested");
         // This is called when the app is being asked to quit: you can ignore
         // this request and let the app carry on running, or call quit() to
         // allow the app to close.
@@ -386,6 +405,9 @@ class GuiAppApplication : public juce::JUCEApplication {
 
   private:
     std::unique_ptr<juce::FileLogger> logger;
+#if JUCE_ANDROID
+    std::unique_ptr<juce::Logger> androidLogger;
+#endif
     std::unique_ptr<MainWindow> mainWindow;
     tracktion::Engine engine{getApplicationName(),
                              std::make_unique<ExtendedUIBehaviour>(), nullptr};
