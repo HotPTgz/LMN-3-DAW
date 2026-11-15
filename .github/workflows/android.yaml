@@ -34,6 +34,17 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      # Gradle's downloads (build tools, libraries), kept between runs so a
+      # busy Maven Central doesn't break the build
+      - name: Cache Gradle downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('Android/make_project.py') }}
+          restore-keys: gradle-${{ runner.os }}-
+
       # The JUCE version in this repo can only make Android projects with its
       # Projucer tool, so build that first (cached between runs)
       - name: Cache the Projucer
@@ -73,7 +84,9 @@ jobs:
         working-directory: Android/Builds/Android
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon assembleRelease_Release
+          # retry once: Maven Central sometimes turns requests away
+          ./gradlew --no-daemon assembleRelease_Release || \
+            (sleep 60 && ./gradlew --no-daemon assembleRelease_Release)
 
       - name: List all compile errors
         if: failure()
