@@ -77,8 +77,13 @@ sources = [s for s in block("target_sources(LMN-3  PRIVATE") if s.endswith(".cpp
 yaml = sorted(str(p.relative_to(ROOT)) for p in (ROOT / "yaml-cpp/src").rglob("*.cpp"))
 generated = ["Android/Generated/ImageData.cpp", "Android/Generated/FontData.cpp"]
 
-includes = [rel(p) for p in block("target_include_directories(LMN-3  PUBLIC")]
-includes += [rel("yaml-cpp/include"), rel("Android/Generated")]
+# header paths are written as they are into the generated CMake file, which
+# lives in Builds/Android/app (relative to Builds/Android)
+APP = HERE / "Builds/Android"  # the Projucer adds one more ../ for app/
+def rel_app(p):
+    return os.path.relpath(ROOT / p, APP).replace(os.sep, "/")
+includes = [rel_app(p) for p in block("target_include_directories(LMN-3  PUBLIC")]
+includes += [rel_app("yaml-cpp/include"), rel_app("Android/Generated")]
 
 juce_modules = ["juce_audio_basics", "juce_audio_devices", "juce_audio_formats",
                 "juce_audio_processors", "juce_audio_utils", "juce_core",
@@ -140,11 +145,12 @@ jucer = f'''<?xml version="1.0" encoding="UTF-8"?>
                    androidVersionCode="{version.replace('.', '')}"
                    androidKeyStore="../../../lmn3-android.keystore" androidKeyStorePass="lmn3lmn3"
                    androidKeyAlias="lmn3" androidKeyAliasPass="lmn3lmn3"
-                   extraCompilerFlags="-Wno-everything"
-                   headerPath={quoteattr(chr(10).join(includes))}>
+                   extraCompilerFlags="-Wno-everything">
       <CONFIGURATIONS>
-        <CONFIGURATION name="Debug" isDebug="1" androidArchitectures="arm64-v8a" optimisation="1"/>
-        <CONFIGURATION name="Release" isDebug="0" androidArchitectures="arm64-v8a" optimisation="3"/>
+        <CONFIGURATION name="Debug" isDebug="1" androidArchitectures="arm64-v8a" optimisation="1"
+                       headerPath={quoteattr(chr(10).join(includes))}/>
+        <CONFIGURATION name="Release" isDebug="0" androidArchitectures="arm64-v8a" optimisation="3"
+                       headerPath={quoteattr(chr(10).join(includes))}/>
       </CONFIGURATIONS>
       <MODULEPATHS>
 {paths}
