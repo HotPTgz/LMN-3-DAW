@@ -39,7 +39,9 @@ config:
     colour8: "ffd79921"
 ```
 
-### Wide screens (LMN-3 v3, 7.9" 1280 × 400)
+### Wide screens (Limoncello, 7.9" 1280 × 400)
+This branch is the software for [Limoncello](https://github.com/HotPTgz/Limoncello), the LMN-3 successor with Hall-effect keys and a 7.9" screen.
+
 Any window more than 2.2 times as wide as it is tall gets the wide layout: the header runs across the top, the screen's
 picture fills the left, and the four knob boxes sit in a 2 × 2 panel on the right, in the same order as the v3's
 encoders (1 2 on top, 3 4 below). For the Waveshare 7.9" monitor set:
@@ -54,8 +56,8 @@ The monitor starts in portrait (400 × 1280). Turn it sideways in Raspberry Pi O
 (Layout → Orientation), or on the command line with `wlr-randr --output HDMI-A-1 --transform 90`
 (use the output name `wlr-randr` lists, and `270` if the picture is upside down).
 
-### LMN-3 v3 controls
-These need the v3 Teensy firmware (it sends CC 113–115):
+### Limoncello controls
+These need the [Limoncello Teensy firmware](https://github.com/HotPTgz/Limoncello/tree/main/firmware) (it sends CC 113–115):
 
 | Control | What it does |
 | --- | --- |
