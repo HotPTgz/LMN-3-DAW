@@ -128,9 +128,17 @@ void drawFace(juce::Graphics &g, float x, float y, float s, Mood mood,
     }
 }
 
+namespace {
+float currentStageWidth = designWidth;
+}
+
+float stageWidth() { return currentStageWidth; }
+
 void drawStars(juce::Graphics &g, double time) {
-    for (int i = 0; i < 14; i++) {
-        float x = float((i * 137) % 780 + 10);
+    int count = juce::roundToInt(14 * stageWidth() / designWidth);
+    int span = juce::roundToInt(stageWidth() - 20.0f);
+    for (int i = 0; i < count; i++) {
+        float x = float((i * 137) % span + 10);
         float y = float((i * 71) % 120 + 8);
         float r = 1.2f + float(i % 3) * 0.8f;
         float t = pingPong(time + (i % 7) * 0.35, 2.4);
@@ -350,7 +358,8 @@ void paintFrame(juce::Graphics &g, juce::Rectangle<float> bounds,
                 const juce::String &title, const juce::String &subtitle,
                 const juce::String &pageLabel,
                 const std::array<KnobInfo, 4> &knobs, bool stars, double time,
-                const std::function<void(juce::Graphics &)> &paintStage) {
+                const std::function<void(juce::Graphics &)> &paintStage,
+                bool flexibleStage) {
     juce::Graphics::ScopedSaveState outer(g);
     g.reduceClipRegion(bounds.toNearestInt());
     g.setColour(Colours::background);
@@ -362,17 +371,27 @@ void paintFrame(juce::Graphics &g, juce::Rectangle<float> bounds,
 
     {
         juce::Graphics::ScopedSaveState state(g);
+        float width = designWidth;
         if (f.wide) {
             auto origin = wideStageOrigin();
-            g.addTransform(juce::AffineTransform::scale(wideStageScale())
-                               .translated(origin.x, origin.y));
+            float s = wideStageScale();
+            if (flexibleStage) {
+                // all the width left of the knobs, at the same scale
+                auto area = wideStageArea();
+                origin.x = area.getX() + 8.0f;
+                width = (area.getWidth() - 16.0f) / s;
+            }
+            g.addTransform(
+                juce::AffineTransform::scale(s).translated(origin.x, origin.y));
         } else {
             g.addTransform(juce::AffineTransform::translation(0, headerHeight));
         }
-        g.reduceClipRegion(0, 0, int(designWidth), int(stageHeight));
+        g.reduceClipRegion(0, 0, int(std::ceil(width)), int(stageHeight));
+        currentStageWidth = width;
         if (stars)
             drawStars(g, time);
         paintStage(g);
+        currentStageWidth = designWidth;
     }
 
     if (f.wide)

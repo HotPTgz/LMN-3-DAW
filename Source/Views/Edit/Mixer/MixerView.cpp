@@ -6,7 +6,6 @@ namespace AuxSends = app_view_models::AuxSends;
 namespace EngineHelpers = app_view_models::EngineHelpers;
 
 namespace {
-constexpr int maxJars = 9;
 constexpr float jarPitch = 86.0f, jarWidth = 62.0f, jarTop = 30.0f,
                 jarHeight = 226.0f;
 
@@ -155,19 +154,25 @@ juce::String MixerView::getChangeSignature() {
 
 //==============================================================================
 void MixerView::paintStage(juce::Graphics &g, double time) {
+    // 9 jars on the 800 stage, more on a wide screen
+    const int maxJars =
+        juce::jlimit(1, 12, int((stageWidth() - 40.0f) / jarPitch));
     int n = getNumTracks();
     int selected = viewModel.listViewModel.itemListState.getSelectedItemIndex();
     int first = juce::jlimit(0, juce::jmax(0, n - maxJars), selected - 4);
 
     for (int i = first; i < juce::jmin(n, first + maxJars); i++)
         if (auto track = getTrack(i))
-            paintJar(g, *track, 24.0f + (i - first) * jarPitch, i == selected,
-                     time);
+            paintJar(g, *track,
+                     24.0f + (stageWidth() - designWidth) / 2.0f +
+                         (i - first) * jarPitch,
+                     i == selected, time);
 
     if (first > 0)
         drawText(g, utf8("‹"), 2, 110, 20, 40, 28, Colours::muted, true);
     if (first + maxJars < n)
-        drawText(g, utf8("›"), 780, 110, 20, 40, 28, Colours::muted, true);
+        drawText(g, utf8("›"), stageWidth() - 20.0f, 110, 20, 40, 28,
+                 Colours::muted, true);
 }
 
 void MixerView::paintJar(juce::Graphics &g, tracktion::Track &track, float x,

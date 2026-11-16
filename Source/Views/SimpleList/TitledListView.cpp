@@ -122,9 +122,11 @@ void TitledListView::paintStage(juce::Graphics &g, double time) {
             top = 56.0f;
         }
         bool hasMascot = mascot != Mascot::none;
-        paintList(g, time, top, hasMascot ? 520.0f : 744.0f);
+        // a wide screen's extra width goes to the list
+        float extra = stageWidth() - designWidth;
+        paintList(g, time, top, (hasMascot ? 520.0f : 744.0f) + extra);
         if (hasMascot)
-            paintMascot(g, time, 668.0f, step >= 0 ? 170.0f : 140.0f);
+            paintMascot(g, time, 668.0f + extra, step >= 0 ? 170.0f : 140.0f);
         break;
     }
     }

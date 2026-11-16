@@ -85,6 +85,7 @@ class TitledListView : public PlayfulScreen {
     juce::String getPageLabel() override { return hint; }
     std::array<Playful::KnobInfo, 4> getKnobs() override;
     void paintStage(juce::Graphics &g, double time) override;
+    bool hasFlexibleStage() override { return layout == Layout::list; }
     juce::String getChangeSignature() override;
 
   private:

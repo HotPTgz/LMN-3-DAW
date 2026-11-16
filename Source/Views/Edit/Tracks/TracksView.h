@@ -77,6 +77,7 @@ class TracksView : public PlayfulScreen,
   protected:
     juce::String getTitle() override;
     juce::String getSubtitle() override;
+    bool hasFlexibleStage() override { return true; }
     juce::String getPageLabel() override;
     std::array<Playful::KnobInfo, 4> getKnobs() override;
     void paintStage(juce::Graphics &g, double time) override;

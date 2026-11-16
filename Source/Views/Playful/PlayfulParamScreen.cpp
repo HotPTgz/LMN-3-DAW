@@ -56,9 +56,11 @@ juce::String PlayfulScreen::getChangeSignature() {
 
 void PlayfulScreen::paint(juce::Graphics &g) {
     double time = getAnimationTime();
-    paintFrame(g, getLocalBounds().toFloat(), getTitle(), getSubtitle(),
-               getPageLabel(), getKnobs(), stageShowsStars(), time,
-               [&](juce::Graphics &stage) { paintStage(stage, time); });
+    paintFrame(
+        g, getLocalBounds().toFloat(), getTitle(), getSubtitle(),
+        getPageLabel(), getKnobs(), stageShowsStars(), time,
+        [&](juce::Graphics &stage) { paintStage(stage, time); },
+        hasFlexibleStage());
 }
 
 //==============================================================================

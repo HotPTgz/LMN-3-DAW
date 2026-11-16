@@ -18,6 +18,7 @@ class MixerView : public PlayfulScreen,
   public:
     MixerView(tracktion::Edit &e, app_services::MidiCommandManager &mcm);
     ~MixerView() override;
+    bool hasFlexibleStage() override { return true; }
 
     void encoder1Increased() override;
     void encoder1Decreased() override;

@@ -75,7 +75,7 @@ void drawKnobStrip(juce::Graphics &g, const std::array<KnobInfo, 4> &knobs);
 constexpr float wideWidth = 1280.0f;
 constexpr float wideHeight = 400.0f;
 constexpr float wideHeaderHeight = 44.0f;
-constexpr float widePanelX = 944.0f;
+constexpr float widePanelX = 984.0f;
 
 // A screen is laid out wide when it is more than 2.2 times as wide as tall
 bool isWide(float width, float height);
@@ -106,12 +106,18 @@ int knobAt(juce::Rectangle<float> bounds, juce::Point<float> p);
 
 // Paints a whole frame (background, header, stage, knobs) into bounds, in
 // the normal or the wide layout depending on its shape. paintStage draws in
-// stage coordinates (800x328).
+// stage coordinates: 328 tall and stageWidth() wide. That is always 800,
+// except for a flexible stage on a wide screen, which gets all the width
+// left of the knobs (about 900).
 void paintFrame(juce::Graphics &g, juce::Rectangle<float> bounds,
                 const juce::String &title, const juce::String &subtitle,
                 const juce::String &pageLabel,
                 const std::array<KnobInfo, 4> &knobs, bool stars, double time,
-                const std::function<void(juce::Graphics &)> &paintStage);
+                const std::function<void(juce::Graphics &)> &paintStage,
+                bool flexibleStage = false);
+
+// The width of the stage being painted (see paintFrame)
+float stageWidth();
 
 // Path helpers
 juce::Path roundedRect(float x, float y, float w, float h, float r);

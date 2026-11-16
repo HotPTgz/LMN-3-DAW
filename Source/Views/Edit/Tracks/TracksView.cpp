@@ -407,7 +407,8 @@ void TracksView::paintLoopAndPlayhead(juce::Graphics &g, const Timeline &tl,
 }
 
 void TracksView::paintLanes(juce::Graphics &g, double time) {
-    Timeline tl{92.0f, 644.0f};
+    const float w = stageWidth(); // 800, or wider on a wide screen
+    Timeline tl{92.0f, w - 156.0f};
     int n = getNumTracks();
     int selected = viewModel.listViewModel.itemListState.getSelectedItemIndex();
     int first = juce::jlimit(0, juce::jmax(0, n - maxLanes), selected - 3);
@@ -424,10 +425,11 @@ void TracksView::paintLanes(juce::Graphics &g, double time) {
 
         g.setColour(isSelected ? Colours::dim.withAlpha(0.9f)
                                : Colours::panel.withAlpha(0.85f));
-        g.fillRoundedRectangle(58.0f, y, 726.0f, laneHeight, 12.0f);
+        g.fillRoundedRectangle(58.0f, y, w - 74.0f, laneHeight, 12.0f);
         if (isSelected) {
             g.setColour(Colours::cream);
-            g.drawRoundedRectangle(58.0f, y, 726.0f, laneHeight, 12.0f, 3.0f);
+            g.drawRoundedRectangle(58.0f, y, w - 74.0f, laneHeight, 12.0f,
+                                   3.0f);
         }
 
         drawBadge(g, 34.0f, y + laneHeight / 2.0f, 13.0f, track->getColour(),
@@ -438,11 +440,11 @@ void TracksView::paintLanes(juce::Graphics &g, double time) {
         paintClips(g, tl, *track, y + 4.0f, laneHeight - 8.0f, false, time);
 
         if (track->isMuted(false))
-            drawPill(g, {742.0f, y + 6.0f, 34.0f, 18.0f}, "M", Colours::red,
+            drawPill(g, {w - 58.0f, y + 6.0f, 34.0f, 18.0f}, "M", Colours::red,
                      Colours::ink, 11.0f);
         else if (track->isSolo(false))
-            drawPill(g, {742.0f, y + 6.0f, 34.0f, 18.0f}, "S", Colours::yellow,
-                     Colours::ink, 11.0f);
+            drawPill(g, {w - 58.0f, y + 6.0f, 34.0f, 18.0f}, "S",
+                     Colours::yellow, Colours::ink, 11.0f);
     }
 
     if (n > maxLanes) {
@@ -461,7 +463,7 @@ void TracksView::paintLanes(juce::Graphics &g, double time) {
 }
 
 void TracksView::paintZoomed(juce::Graphics &g, double time) {
-    Timeline tl{92.0f, 686.0f};
+    Timeline tl{92.0f, stageWidth() - 114.0f};
     auto track = getSelectedTrack();
     if (track == nullptr)
         return;
