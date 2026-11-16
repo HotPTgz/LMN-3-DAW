@@ -30,6 +30,15 @@ struct TeeLogger : juce::Logger {
 };
 #endif
 
+#if JUCE_ANDROID
+// Phones mix fast and slow (power-saving) cores: sharing each audio block
+// between threads means waiting for the slowest one, which makes the sound
+// crackle. One audio thread is steadier.
+struct PhoneEngineBehaviour : tracktion::EngineBehaviour {
+    int getNumberOfCPUsToUseForAudio() override { return 1; }
+};
+#endif
+
 class GuiAppApplication : public juce::JUCEApplication {
   public:
     GuiAppApplication() {
@@ -289,6 +298,37 @@ class GuiAppApplication : public juce::JUCEApplication {
             juce::Logger::writeToLog(
                 "Attempt to initialise default devices failed!");
         }
+#if JUCE_ANDROID
+        // Use the phone's own sample rate (no resampling), and a buffer of
+        // at least ~16 ms so the sound doesn't crackle. A bigger buffer
+        // chosen in Settings is kept.
+        if (auto *device = deviceManager.getCurrentAudioDevice()) {
+            auto setup = deviceManager.getAudioDeviceSetup();
+            auto rates = device->getAvailableSampleRates();
+            if (rates.contains(48000.0))
+                setup.sampleRate = 48000.0;
+            int minimum = juce::roundToInt(setup.sampleRate * 0.016);
+            if (device->getCurrentBufferSizeSamples() < minimum) {
+                auto sizes = device->getAvailableBufferSizes();
+                int chosen = 0;
+                for (auto size : sizes)
+                    if (size >= minimum && (chosen == 0 || size < chosen))
+                        chosen = size;
+                setup.bufferSize = chosen > 0 ? chosen : minimum;
+            }
+            auto error = deviceManager.setAudioDeviceSetup(setup, true);
+            if (error.isNotEmpty())
+                juce::Logger::writeToLog("Audio setup: " + error);
+        }
+#endif
+        if (auto *device = deviceManager.getCurrentAudioDevice())
+            juce::Logger::writeToLog(
+                "Audio: " + device->getName() + ", " +
+                juce::String(device->getCurrentSampleRate()) + " Hz, " +
+                juce::String(device->getCurrentBufferSizeSamples()) +
+                " samples, output latency " +
+                juce::String(device->getOutputLatencyInSamples()) +
+                " samples");
     }
 
     void shutdown() override {
@@ -424,7 +464,12 @@ class GuiAppApplication : public juce::JUCEApplication {
 #endif
     std::unique_ptr<MainWindow> mainWindow;
     tracktion::Engine engine{getApplicationName(),
-                             std::make_unique<ExtendedUIBehaviour>(), nullptr};
+                             std::make_unique<ExtendedUIBehaviour>(),
+#if JUCE_ANDROID
+                             std::make_unique<PhoneEngineBehaviour>()};
+#else
+                             nullptr};
+#endif
     std::unique_ptr<tracktion::Edit> edit;
     std::unique_ptr<app_services::MidiCommandManager> midiCommandManager;
     std::unique_ptr<VirtualHardware> virtualHardware;
