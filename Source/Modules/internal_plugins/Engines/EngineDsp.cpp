@@ -139,6 +139,7 @@ void PolySynth::noteOn(int note, float velocity) {
     v->note = note;
     v->velocity = juce::jlimit(0.0f, 1.0f, velocity);
     v->age = ++counter;
+    v->sustained = false;
     v->amp.noteOn();
     // mark as needing a start: negative velocity is never used otherwise
     v->velocity = -1.0f - v->velocity;
@@ -147,13 +148,33 @@ void PolySynth::noteOn(int note, float velocity) {
 void PolySynth::noteOff(int note) {
     for (auto &v : voices)
         if (v.note == note && v.amp.isActive() && !v.amp.isReleasing()) {
+            if (sustainDown) {
+                v.sustained = true;
+                continue;
+            }
             v.amp.noteOff();
             v.sound->stop();
         }
 }
 
+void PolySynth::setSustain(bool down) {
+    sustainDown = down;
+    if (down)
+        return;
+    for (auto &v : voices)
+        if (v.sustained) {
+            v.sustained = false;
+            if (v.amp.isActive() && !v.amp.isReleasing()) {
+                v.amp.noteOff();
+                v.sound->stop();
+            }
+        }
+}
+
 void PolySynth::allNotesOff() {
+    sustainDown = false;
     for (auto &v : voices) {
+        v.sustained = false;
         v.amp.noteOff();
         v.sound->stop();
     }

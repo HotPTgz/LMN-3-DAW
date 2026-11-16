@@ -143,7 +143,8 @@ void drawStars(juce::Graphics &g, double time) {
 void drawBackground(juce::Graphics &g) { g.fillAll(Colours::background); }
 
 void drawHeader(juce::Graphics &g, const juce::String &title,
-                const juce::String &subtitle, const juce::String &pageLabel) {
+                const juce::String &subtitle, const juce::String &pageLabel,
+                float width) {
     g.setColour(Colours::yellow);
     g.fillEllipse(24, 21, 14, 14);
 
@@ -159,7 +160,7 @@ void drawHeader(juce::Graphics &g, const juce::String &title,
 
     auto f = font(14.0f);
     float w = f.getStringWidthFloat(right) + 24.0f;
-    float x = designWidth - 24.0f - w;
+    float x = width - 24.0f - w;
     g.setColour(Colours::panel);
     g.fillRoundedRectangle(x, 15, w, 26, 13);
     g.setColour(Colours::muted);
@@ -220,6 +221,164 @@ void drawKnobStrip(juce::Graphics &g, const std::array<KnobInfo, 4> &knobs) {
                 .toNearestInt(),
             juce::Justification::centredLeft, 1, 0.7f);
     }
+}
+
+//==============================================================================
+bool isWide(float width, float height) {
+    return height > 0.0f && width / height > 2.2f;
+}
+
+juce::AffineTransform FrameGeometry::toComponent() const {
+    return juce::AffineTransform::scale(scale).translated(offsetX, offsetY);
+}
+
+juce::Point<float> FrameGeometry::toDesign(juce::Point<float> p) const {
+    return {(p.x - offsetX) / scale, (p.y - offsetY) / scale};
+}
+
+FrameGeometry frameGeometry(juce::Rectangle<float> bounds) {
+    FrameGeometry f;
+    f.wide = isWide(bounds.getWidth(), bounds.getHeight());
+    f.designW = f.wide ? wideWidth : designWidth;
+    f.designH = f.wide ? wideHeight : designHeight;
+    f.scale = juce::jmin(bounds.getWidth() / f.designW,
+                         bounds.getHeight() / f.designH);
+    f.offsetX = bounds.getX() + (bounds.getWidth() - f.designW * f.scale) / 2;
+    f.offsetY = bounds.getY() + (bounds.getHeight() - f.designH * f.scale) / 2;
+    return f;
+}
+
+juce::Rectangle<float> wideStageArea() {
+    return {0.0f, wideHeaderHeight, widePanelX, wideHeight - wideHeaderHeight};
+}
+
+float wideStageScale() {
+    auto area = wideStageArea();
+    return juce::jmin(area.getWidth() / designWidth,
+                      area.getHeight() / stageHeight);
+}
+
+juce::Point<float> wideStageOrigin() {
+    auto area = wideStageArea();
+    float s = wideStageScale();
+    return {area.getX() + (area.getWidth() - designWidth * s) / 2.0f,
+            area.getY() + (area.getHeight() - stageHeight * s) / 2.0f};
+}
+
+juce::Rectangle<float> wideKnobTile(int index) {
+    const float right = 14.0f, bottom = 12.0f, gap = 12.0f;
+    const float x0 = widePanelX + 4.0f, y0 = wideHeaderHeight + 6.0f;
+    const float w = (wideWidth - right - x0 - gap) / 2.0f;
+    const float h = (wideHeight - bottom - y0 - gap) / 2.0f;
+    return {x0 + (index % 2) * (w + gap), y0 + (index / 2) * (h + gap), w, h};
+}
+
+void drawKnobPanel(juce::Graphics &g, const std::array<KnobInfo, 4> &knobs) {
+    for (int i = 0; i < 4; i++) {
+        const auto &k = knobs[size_t(i)];
+        auto r = wideKnobTile(i);
+        juce::Colour colour = k.enabled ? k.colour : Colours::dim;
+        g.setColour(Colours::panel);
+        g.fillRoundedRectangle(r, 22.0f);
+
+        // the encoder's number, in its colour
+        g.setColour(colour.withAlpha(k.enabled ? 1.0f : 0.6f));
+        g.fillEllipse(r.getX() + 12, r.getY() + 12, 20, 20);
+        g.setColour(Colours::ink);
+        g.setFont(font(13.0f, true));
+        g.drawText(juce::String(i + 1),
+                   juce::Rectangle<float>(r.getX() + 12, r.getY() + 12, 20, 20),
+                   juce::Justification::centred);
+
+        // knob ring
+        float cx = r.getCentreX(), cy = r.getY() + 54.0f, rad = 27.0f;
+        auto stroke = juce::PathStrokeType(8.0f, juce::PathStrokeType::curved,
+                                           juce::PathStrokeType::rounded);
+        juce::Path ring;
+        ring.addCentredArc(cx, cy, rad, rad, 0, juce::degreesToRadians(-135.0f),
+                           juce::degreesToRadians(135.0f), true);
+        g.setColour(Colours::dim);
+        g.strokePath(ring, stroke);
+        if (k.enabled) {
+            juce::Path arc;
+            float end =
+                -135.0f + 270.0f * juce::jlimit(0.001f, 1.0f, k.normalised);
+            arc.addCentredArc(cx, cy, rad, rad, 0,
+                              juce::degreesToRadians(-135.0f),
+                              juce::degreesToRadians(end), true);
+            g.setColour(colour);
+            g.strokePath(arc, stroke);
+        }
+        g.setColour(colour);
+        fillEllipseCentred(g, cx, cy, 9, 9);
+
+        g.setColour(Colours::muted);
+        g.setFont(font(13.0f));
+        g.drawFittedText(k.enabled ? k.label.toUpperCase() : utf8("—"),
+                         juce::Rectangle<float>(r.getX() + 8, r.getY() + 92,
+                                                r.getWidth() - 16, 18)
+                             .toNearestInt(),
+                         juce::Justification::centred, 1, 0.7f);
+        g.setColour(Colours::text);
+        g.setFont(font(22.0f, true));
+        g.drawFittedText(k.enabled ? k.value : juce::String(),
+                         juce::Rectangle<float>(r.getX() + 8, r.getY() + 112,
+                                                r.getWidth() - 16, 30)
+                             .toNearestInt(),
+                         juce::Justification::centred, 1, 0.6f);
+    }
+}
+
+int knobAt(juce::Rectangle<float> bounds, juce::Point<float> p) {
+    auto f = frameGeometry(bounds);
+    auto d = f.toDesign(p);
+    if (f.wide) {
+        for (int i = 0; i < 4; i++)
+            if (wideKnobTile(i).expanded(6.0f).contains(d))
+                return i;
+        return -1;
+    }
+    // matches drawKnobStrip
+    if (d.y < stripTop || d.y > designHeight || d.x < 0.0f || d.x > designWidth)
+        return -1;
+    const float left = 18.0f, gap = 10.0f;
+    const float w = (designWidth - 2 * left - 3 * gap) / 4.0f;
+    return juce::jlimit(0, 3, int((d.x - left + gap / 2) / (w + gap)));
+}
+
+void paintFrame(juce::Graphics &g, juce::Rectangle<float> bounds,
+                const juce::String &title, const juce::String &subtitle,
+                const juce::String &pageLabel,
+                const std::array<KnobInfo, 4> &knobs, bool stars, double time,
+                const std::function<void(juce::Graphics &)> &paintStage) {
+    juce::Graphics::ScopedSaveState outer(g);
+    g.reduceClipRegion(bounds.toNearestInt());
+    g.setColour(Colours::background);
+    g.fillRect(bounds);
+
+    auto f = frameGeometry(bounds);
+    g.addTransform(f.toComponent());
+    drawHeader(g, title, subtitle, pageLabel, f.designW);
+
+    {
+        juce::Graphics::ScopedSaveState state(g);
+        if (f.wide) {
+            auto origin = wideStageOrigin();
+            g.addTransform(juce::AffineTransform::scale(wideStageScale())
+                               .translated(origin.x, origin.y));
+        } else {
+            g.addTransform(juce::AffineTransform::translation(0, headerHeight));
+        }
+        g.reduceClipRegion(0, 0, int(designWidth), int(stageHeight));
+        if (stars)
+            drawStars(g, time);
+        paintStage(g);
+    }
+
+    if (f.wide)
+        drawKnobPanel(g, knobs);
+    else
+        drawKnobStrip(g, knobs);
 }
 
 bool animationsEnabled() {

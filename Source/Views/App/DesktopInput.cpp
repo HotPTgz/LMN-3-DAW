@@ -32,8 +32,12 @@ class KeyboardHelp : public juce::Component {
     void paint(juce::Graphics &g) override {
         using namespace Playful;
         g.fillAll(juce::Colours::black.withAlpha(0.55f));
-        g.addTransform(juce::AffineTransform::scale(
-            getWidth() / designWidth, getHeight() / designHeight));
+        // keep the card's shape on wide screens too
+        float scale =
+            juce::jmin(getWidth() / designWidth, getHeight() / designHeight);
+        g.addTransform(juce::AffineTransform::scale(scale).translated(
+            (getWidth() - designWidth * scale) / 2.0f,
+            (getHeight() - designHeight * scale) / 2.0f));
 
         juce::Rectangle<float> card(30, 22, 740, 436);
         g.setColour(Colours::panel);
@@ -70,8 +74,8 @@ class KeyboardHelp : public juce::Component {
             {"Loop In  Loop Out  Loop", "[   ]   Ctrl+L"},
             {"Plus  and  Minus", "=  and  -"},
             {"Save  /  Render", "F8  /  Shift+F8"},
-            {"Undo", "Ctrl+Z"},
-            {"Cut  Paste  Slice", "Ctrl+X  Ctrl+V  Ctrl+D"},
+            {"Undo  Cut  Paste  Slice", "Ctrl+  Z  X  V  D"},
+            {"Mic  /  Joystick click", "F9  /  F10"},
             {"Hold + while pressing keys", "add notes in sequencers"},
         };
 
@@ -113,6 +117,9 @@ DesktopInput::DesktopInput(VirtualHardware &hw) : hardware(hw) {
         {KP::F6Key, false, MCM::TEMPO_BUTTON},
         {KP::F7Key, false, MCM::SETTINGS_BUTTON},
         {KP::F8Key, false, MCM::SAVE_BUTTON},
+        {KP::F9Key, false, MCM::MIC_BUTTON},
+        {KP::F9Key, true, MCM::MIC_BUTTON}, // Control + MIC: sample
+        {KP::F10Key, false, MCM::JOYSTICK_BUTTON},
         {KP::spaceKey, false, MCM::PLAY_BUTTON},
         {KP::escapeKey, false, MCM::STOP_BUTTON},
         {KP::returnKey, false, MCM::RECORD_BUTTON},
@@ -165,15 +172,6 @@ int DesktopInput::noteIndexForKey(juce::juce_wchar key) {
             return 12 + i;
     }
     return -1;
-}
-
-int DesktopInput::encoderForStripX(float x) {
-    // matches Playful::drawKnobStrip
-    const float left = 18.0f, gap = 10.0f;
-    const float w = (Playful::designWidth - 2 * left - 3 * gap) / 4.0f;
-    if (x < 0.0f || x > Playful::designWidth)
-        return -1;
-    return juce::jlimit(0, 3, int((x - left + gap / 2) / (w + gap)));
 }
 
 //==============================================================================
@@ -327,11 +325,7 @@ int DesktopInput::stripEncoderAt(const juce::MouseEvent &e) const {
     if (content->getWidth() <= 0 || content->getHeight() <= 0)
         return -1;
     auto p = e.getEventRelativeTo(content).position;
-    float x = p.x * Playful::designWidth / content->getWidth();
-    float y = p.y * Playful::designHeight / content->getHeight();
-    if (y < Playful::stripTop || y > Playful::designHeight)
-        return -1;
-    return encoderForStripX(x);
+    return Playful::knobAt(content->getLocalBounds().toFloat(), p);
 }
 
 void DesktopInput::mouseWheelMove(const juce::MouseEvent &e,

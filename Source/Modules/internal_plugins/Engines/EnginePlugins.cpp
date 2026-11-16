@@ -182,6 +182,10 @@ void EnginePlugin::applyToBuffer(const tracktion::PluginRenderContext &fc) {
                 synth.noteOn(m.getNoteNumber(), m.getFloatVelocity());
             else if (m.isNoteOff())
                 synth.noteOff(m.getNoteNumber());
+            else if (m.isSustainPedalOn())
+                synth.setSustain(true);
+            else if (m.isSustainPedalOff())
+                synth.setSustain(false);
             else if (m.isAllNotesOff() || m.isAllSoundOff())
                 synth.allNotesOff();
         }

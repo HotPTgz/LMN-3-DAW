@@ -62,8 +62,56 @@ struct KnobInfo {
 
 void drawBackground(juce::Graphics &g);
 void drawHeader(juce::Graphics &g, const juce::String &title,
-                const juce::String &subtitle, const juce::String &pageLabel);
+                const juce::String &subtitle, const juce::String &pageLabel,
+                float width = designWidth);
 void drawKnobStrip(juce::Graphics &g, const std::array<KnobInfo, 4> &knobs);
+
+//==============================================================================
+// Wide screens, such as the 7.9" 1280x400 bar of the LMN-3 v3. They use a
+// 1280x400 design space: the header runs across the top, the usual 800x328
+// stage is scaled into the left part, and the four knobs sit in a 2x2 panel
+// on the right, in the same order as the encoders next to the screen
+// (1 2 on top, 3 4 below).
+constexpr float wideWidth = 1280.0f;
+constexpr float wideHeight = 400.0f;
+constexpr float wideHeaderHeight = 44.0f;
+constexpr float widePanelX = 944.0f;
+
+// A screen is laid out wide when it is more than 2.2 times as wide as tall
+bool isWide(float width, float height);
+
+// How a frame's design space maps onto a component area
+struct FrameGeometry {
+    bool wide = false;
+    float designW = designWidth, designH = designHeight;
+    float scale = 1.0f, offsetX = 0.0f, offsetY = 0.0f;
+    juce::AffineTransform toComponent() const;
+    juce::Point<float> toDesign(juce::Point<float> p) const;
+};
+FrameGeometry frameGeometry(juce::Rectangle<float> bounds);
+
+// Where the stage goes in the wide design space (the 800x328 stage is
+// scaled by wideStageScale and placed at wideStageOrigin)
+juce::Rectangle<float> wideStageArea();
+float wideStageScale();
+juce::Point<float> wideStageOrigin();
+
+// The knob tiles of the wide panel, in wide design coordinates
+juce::Rectangle<float> wideKnobTile(int index);
+void drawKnobPanel(juce::Graphics &g, const std::array<KnobInfo, 4> &knobs);
+
+// Which knob (0-3) is under a point (component coordinates) of a frame
+// drawn into bounds, or -1
+int knobAt(juce::Rectangle<float> bounds, juce::Point<float> p);
+
+// Paints a whole frame (background, header, stage, knobs) into bounds, in
+// the normal or the wide layout depending on its shape. paintStage draws in
+// stage coordinates (800x328).
+void paintFrame(juce::Graphics &g, juce::Rectangle<float> bounds,
+                const juce::String &title, const juce::String &subtitle,
+                const juce::String &pageLabel,
+                const std::array<KnobInfo, 4> &knobs, bool stars, double time,
+                const std::function<void(juce::Graphics &)> &paintStage);
 
 // Path helpers
 juce::Path roundedRect(float x, float y, float w, float h, float r);

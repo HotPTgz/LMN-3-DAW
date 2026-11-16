@@ -139,6 +139,17 @@ class MidiCommandManager : private juce::MidiInputCallback {
         // listener, not just the focused component.
         virtual void powerOffHoldStarted() {}
         virtual void powerOffHoldCancelled() {}
+
+        // LMN-3 v3 controls. These go to every listener, not just the
+        // focused screen.
+        virtual void micButtonPressed() {}
+        virtual void micButtonReleased() {}
+        virtual void joystickButtonPressed() {}
+        virtual void joystickButtonReleased() {}
+        // the firmware switched the joystick's up/down mod wheel on or off
+        virtual void modWheelStateChanged(bool isOn) {}
+        // every note played, whichever screen is focused
+        virtual void noteOnReceived(int noteNumber) {}
     };
 
     void addListener(Listener *l);
@@ -202,6 +213,9 @@ class MidiCommandManager : private juce::MidiInputCallback {
     static constexpr int PLAY_BUTTON = 110;
     static constexpr int STOP_BUTTON = 111;
     static constexpr int CONTROL_BUTTON = 112;
+    static constexpr int MIC_BUTTON = 113;      // LMN-3 v3 "mic" key
+    static constexpr int JOYSTICK_BUTTON = 114; // LMN-3 v3 joystick click
+    static constexpr int MOD_WHEEL_STATE = 115; // v3 firmware: 127 on, 0 off
     static constexpr int OCTAVE_CHANGE = 117;
     static constexpr int PLUS_BUTTON = 118;
     static constexpr int MINUS_BUTTON = 119;

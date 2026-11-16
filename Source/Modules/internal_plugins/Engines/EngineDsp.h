@@ -85,6 +85,8 @@ class PolySynth {
     void noteOn(int note, float velocity);
     void noteOff(int note);
     void allNotesOff();
+    // sustain pedal: while down, released keys keep sounding
+    void setSustain(bool down);
 
     // Adds numSamples of sound to left/right
     void render(float *left, float *right, int numSamples, const float *p,
@@ -101,7 +103,9 @@ class PolySynth {
         float velocity = 0.0f;
         juce::uint64 age = 0;
         float pan = 0.5f;
+        bool sustained = false; // key released while the pedal was down
     };
+    bool sustainDown = false;
 
     std::vector<Voice> voices;
     double sampleRate = 44100.0;

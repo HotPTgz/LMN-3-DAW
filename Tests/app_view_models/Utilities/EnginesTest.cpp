@@ -157,6 +157,20 @@ TEST_P(EngineSoundTest, voiceLimitIsRespected) {
     EXPECT_LE(synth->getNumActiveVoices(), 2);
 }
 
+TEST_P(EngineSoundTest, sustainPedalHoldsReleasedKeys) {
+    auto synth = makeSynth(GetParam());
+    Rendered out;
+    synth->noteOn(60, 0.9f);
+    render(*synth, out, 0.2, defaultsFor(GetParam()), openShape());
+    synth->setSustain(true);
+    synth->noteOff(60);
+    render(*synth, out, 1.0, defaultsFor(GetParam()), openShape());
+    EXPECT_GT(synth->getNumActiveVoices(), 0) << "engine " << GetParam();
+    synth->setSustain(false);
+    render(*synth, out, 1.0, defaultsFor(GetParam()), openShape());
+    EXPECT_EQ(synth->getNumActiveVoices(), 0) << "engine " << GetParam();
+}
+
 INSTANTIATE_TEST_SUITE_P(Engines, EngineSoundTest, ::testing::Values(0, 1, 2));
 
 TEST(EngineSoundTest, everyFmAlgorithmMakesSound) {

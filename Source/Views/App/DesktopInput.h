@@ -31,7 +31,6 @@ class DesktopInput : private juce::Timer, private juce::MouseListener {
     // Exposed for tests: which of the 24 keys a character plays (-1 = none),
     // and which encoder box an x position in the knob strip belongs to
     static int noteIndexForKey(juce::juce_wchar key);
-    static int encoderForStripX(float designX);
 
   private:
     struct Button {

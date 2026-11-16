@@ -39,6 +39,34 @@ config:
     colour8: "ffd79921"
 ```
 
+### Wide screens (LMN-3 v3, 7.9" 1280 × 400)
+Any window more than 2.2 times as wide as it is tall gets the wide layout: the header runs across the top, the screen's
+picture fills the left, and the four knob boxes sit in a 2 × 2 panel on the right, in the same order as the v3's
+encoders (1 2 on top, 3 4 below). For the Waveshare 7.9" monitor set:
+```yaml
+config:
+  show-title-bar: false
+  size:
+    width: 1280
+    height: 400
+```
+The monitor starts in portrait (400 × 1280). Turn it sideways in Raspberry Pi OS with **Screen Configuration**
+(Layout → Orientation), or on the command line with `wlr-randr --output HDMI-A-1 --transform 90`
+(use the output name `wlr-randr` lists, and `270` if the picture is upside down).
+
+### LMN-3 v3 controls
+These need the v3 Teensy firmware (it sends CC 113–115):
+
+| Control | What it does |
+| --- | --- |
+| Joystick click | Sustain, like a sustain pedal, while held (4OSC, String, FM, Pulse) |
+| Control + joystick click | Switches the joystick's up/down mod wheel on or off (the firmware remembers it) |
+| MIC | Arms the built-in mic on the selected track: the next **Record** records sound from it. MIC again turns it off. The mic is never played through the speakers, so it can't howl. |
+| Control + MIC | Samples: make a sound and press MIC again (it stops by itself after 20 s). The silence around it is trimmed. A drum sampler asks which pad to put it on (play the key), a sampler gets it across the keys, and a track with no instrument gets a new sampler. It is always saved in `samples/Recorded` too. |
+
+On a computer (`LMN3_KEYBOARD=1`), F9 is MIC and F10 the joystick click. `LMN3_FAKE_MIC=1` replaces the mic with a
+test tone for sampling, for computers without one.
+
 The first time you run the application, the directories `~/.config/LMN-3/samples` and 
 `~/.config/LMN-3/drum kits` will be automatically created. See the sections below for details on how to add
 synth samples and drum kits to the application.

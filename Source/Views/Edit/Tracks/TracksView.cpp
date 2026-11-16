@@ -86,6 +86,14 @@ juce::String TracksView::getSubtitle() {
                      (octave >= 0 ? "+" : "") + juce::String(octave);
     if (looping)
         s += utf8("  ·  loop");
+    // the track the mic is armed on (LMN-3 v3 MIC key)
+    auto micTrack =
+        edit.state.getProperty(juce::Identifier("micTrack")).toString();
+    if (micTrack.isNotEmpty())
+        for (int i = 0; i < getNumTracks(); i++)
+            if (auto track = getTrack(i))
+                if (track->itemID.toString() == micTrack)
+                    s += utf8("  ·  mic → ") + juce::String(i + 1);
     return s;
 }
 
@@ -150,6 +158,65 @@ juce::String TracksView::getChangeSignature() {
     s << "|" << int(isZoomed());
     return s;
 }
+
+namespace {
+// Peak levels of an audio file, worked out once per file (for drawing audio
+// clips such as mic recordings)
+const std::vector<float> &wavePeaks(tracktion::Engine &engine,
+                                    const juce::File &file) {
+    static std::map<juce::String, std::vector<float>> cache;
+    auto key = file.getFullPathName() + "|" +
+               juce::String(file.getLastModificationTime().toMilliseconds());
+    auto found = cache.find(key);
+    if (found != cache.end())
+        return found->second;
+    std::vector<float> peaks;
+    std::unique_ptr<juce::AudioFormatReader> reader(
+        engine.getAudioFileFormatManager().readFormatManager.createReaderFor(
+            file));
+    if (reader != nullptr && reader->lengthInSamples > 0) {
+        const int bins = 400;
+        juce::int64 perBin =
+            std::max<juce::int64>(1, reader->lengthInSamples / bins);
+        for (int b = 0; b < bins; b++) {
+            juce::Range<float> levels[2];
+            reader->readMaxLevels(b * perBin, perBin, levels,
+                                  juce::jmin(2, int(reader->numChannels)));
+            float peak = 0.0f;
+            for (int c = 0; c < juce::jmin(2, int(reader->numChannels)); c++)
+                peak =
+                    juce::jmax(peak, levels[c].getEnd(), -levels[c].getStart());
+            peaks.push_back(juce::jmin(1.0f, peak));
+        }
+        // seconds per bin, stored at the end
+        peaks.push_back(float(perBin / reader->sampleRate));
+    }
+    return cache[key] = std::move(peaks);
+}
+
+void drawWaveClip(juce::Graphics &g, tracktion::WaveAudioClip &clip,
+                  juce::Rectangle<float> r, juce::Colour colour, bool big) {
+    auto &peaks = wavePeaks(clip.edit.engine, clip.getOriginalFile());
+    if (peaks.size() < 2)
+        return;
+    int bins = int(peaks.size()) - 1;
+    double binSeconds = peaks.back();
+    double offset = clip.getPosition().getOffset().inSeconds();
+    double length = clip.getPosition().getLength().inSeconds();
+    auto area = r.reduced(big ? 10.0f : 3.0f, big ? 10.0f : 3.0f);
+    float mid = area.getCentreY(), half = area.getHeight() / 2.0f;
+    g.setColour(big ? colour : Colours::ink.withAlpha(0.55f));
+    float step = big ? 3.0f : 2.0f;
+    for (float x = area.getX(); x < area.getRight(); x += step) {
+        double t = offset + length * (x - area.getX()) / area.getWidth();
+        int bin = int(t / binSeconds);
+        if (bin < 0 || bin >= bins)
+            continue;
+        float h = juce::jmax(1.0f, peaks[size_t(bin)] * half);
+        g.fillRoundedRectangle(x, mid - h, step * 0.6f, 2 * h, step * 0.3f);
+    }
+}
+} // namespace
 
 //==============================================================================
 float TracksView::timeToX(const Timeline &tl, double seconds) {
@@ -229,6 +296,10 @@ void TracksView::paintClips(juce::Graphics &g, const Timeline &tl,
             g.fillRoundedRectangle(r, juce::jmin(10.0f, r.getHeight() / 2.0f));
         }
 
+        if (auto waveClip = dynamic_cast<tracktion::WaveAudioClip *>(clip)) {
+            drawWaveClip(g, *waveClip, r, colour, big);
+            continue;
+        }
         auto midiClip = dynamic_cast<tracktion::MidiClip *>(clip);
         if (midiClip == nullptr || !midiClip->hasValidSequence())
             continue;

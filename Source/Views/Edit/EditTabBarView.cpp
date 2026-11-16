@@ -67,6 +67,24 @@ EditTabBarView::EditTabBarView(tracktion::Edit &e,
     addChildComponent(powerOffOverlay);
     powerOffOverlay.setAlwaysOnTop(true);
 
+    liveControls = std::make_unique<LiveControls>(
+        edit, midiCommandManager,
+        [this]() -> tracktion::AudioTrack * {
+            int index = getTabNames().indexOf(tracksTabName);
+            if (auto tracksView =
+                    dynamic_cast<TracksView *>(getTabContentComponent(index)))
+                return dynamic_cast<tracktion::AudioTrack *>(
+                    tracksView->getViewModel().listViewModel.getSelectedItem());
+            return nullptr;
+        },
+        [this](const juce::String &message, int ms) {
+            showMessage(message, ms);
+        });
+    sampleOverlay = std::make_unique<SampleOverlay>(*liveControls);
+    addChildComponent(*sampleOverlay);
+    sampleOverlay->setAlwaysOnTop(true);
+    liveControls->onStateChanged = [this]() { sampleOverlay->update(); };
+
     midiCommandManager.addListener(this);
     viewModel.addListener(this);
 
@@ -75,6 +93,7 @@ EditTabBarView::EditTabBarView(tracktion::Edit &e,
 }
 
 EditTabBarView::~EditTabBarView() {
+    liveControls = nullptr;
     midiCommandManager.removeListener(this);
     viewModel.removeListener(this);
     juce::StringArray tabNames = getTabNames();
@@ -112,6 +131,8 @@ void EditTabBarView::resized() {
 
     renderMenu.setBounds(getLocalBounds());
     powerOffOverlay.setBounds(getLocalBounds());
+    if (sampleOverlay != nullptr)
+        sampleOverlay->setBounds(getLocalBounds());
 }
 
 void EditTabBarView::showMessage(const juce::String &message, int durationMs) {

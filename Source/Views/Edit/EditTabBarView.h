@@ -1,8 +1,10 @@
 #pragma once
+#include "LiveControls.h"
 #include "MessageBox.h"
 #include "OctaveDisplayComponent.h"
 #include "PowerOffOverlay.h"
 #include "RenderMenuComponent.h"
+#include "SampleOverlay.h"
 #include <app_navigation/app_navigation.h>
 #include <app_services/app_services.h>
 #include <app_view_models/app_view_models.h>
@@ -67,6 +69,10 @@ class EditTabBarView : public juce::TabbedComponent,
     MessageBox messageBox;
     RenderMenuComponent renderMenu;
     PowerOffOverlay powerOffOverlay;
+
+    // joystick click, MIC key (LMN-3 v3) and the sampling screen
+    std::unique_ptr<LiveControls> liveControls;
+    std::unique_ptr<SampleOverlay> sampleOverlay;
 
     // Counts down while Control + Stop are held
     struct PowerOffCountdown : public juce::Timer {

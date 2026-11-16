@@ -51,6 +51,9 @@ void MidiCommandManager::midiMessageReceived(const juce::MidiMessage &message,
     if (message.isNoteOn()) {
         if (auto listener = dynamic_cast<Listener *>(focusedComponent))
             listener->noteOnPressed(message.getNoteNumber());
+        listeners.call([message](Listener &l) {
+            l.noteOnReceived(message.getNoteNumber());
+        });
     }
 
     if (message.isController()) {
@@ -396,6 +399,26 @@ void MidiCommandManager::midiMessageReceived(const juce::MidiMessage &message,
                     listener->undoButtonReleased();
             }
 
+            break;
+
+        case MIC_BUTTON:
+            if (message.getControllerValue() == 127)
+                listeners.call([](Listener &l) { l.micButtonPressed(); });
+            if (message.getControllerValue() == 0)
+                listeners.call([](Listener &l) { l.micButtonReleased(); });
+            break;
+
+        case JOYSTICK_BUTTON:
+            if (message.getControllerValue() == 127)
+                listeners.call([](Listener &l) { l.joystickButtonPressed(); });
+            if (message.getControllerValue() == 0)
+                listeners.call([](Listener &l) { l.joystickButtonReleased(); });
+            break;
+
+        case MOD_WHEEL_STATE:
+            listeners.call([message](Listener &l) {
+                l.modWheelStateChanged(message.getControllerValue() >= 64);
+            });
             break;
 
         case OCTAVE_CHANGE:

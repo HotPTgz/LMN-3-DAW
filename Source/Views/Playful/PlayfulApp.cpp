@@ -15,29 +15,8 @@ void paintScreen(juce::Graphics &g, juce::Rectangle<int> bounds,
                  const std::array<KnobInfo, 4> &knobs,
                  const std::function<void(juce::Graphics &)> &paintStage,
                  bool stars, double time) {
-    juce::Graphics::ScopedSaveState outer(g);
-    g.reduceClipRegion(bounds);
-    g.setColour(Colours::background);
-    g.fillRect(bounds);
-    float scale = juce::jmin(bounds.getWidth() / designWidth,
-                             bounds.getHeight() / designHeight);
-    float offsetX =
-        bounds.getX() + (bounds.getWidth() - designWidth * scale) / 2.0f;
-    float offsetY =
-        bounds.getY() + (bounds.getHeight() - designHeight * scale) / 2.0f;
-    g.addTransform(
-        juce::AffineTransform::scale(scale).translated(offsetX, offsetY));
-
-    drawHeader(g, title, subtitle, pageLabel);
-    {
-        juce::Graphics::ScopedSaveState state(g);
-        g.addTransform(juce::AffineTransform::translation(0, headerHeight));
-        g.reduceClipRegion(0, 0, int(designWidth), int(stageHeight));
-        if (stars)
-            drawStars(g, time);
-        paintStage(g);
-    }
-    drawKnobStrip(g, knobs);
+    paintFrame(g, bounds.toFloat(), title, subtitle, pageLabel, knobs, stars,
+               time, paintStage);
 }
 
 const juce::Array<juce::Colour> &trackPalette() {

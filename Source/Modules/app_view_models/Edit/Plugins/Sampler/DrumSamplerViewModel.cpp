@@ -67,6 +67,8 @@ void DrumSamplerViewModel::valueTreePropertyChanged(
                                                property);
     if (treeWhosePropertyHasChanged == state) {
         if (property == IDs::selectedSoundIndex) {
+            // a pad's sound may have been swapped (e.g. a mic sample)
+            rebuildSampleFilesFromPlugin();
             markAndUpdate(shouldUpdateGain);
             updateThumb();
         }

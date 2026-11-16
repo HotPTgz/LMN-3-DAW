@@ -55,30 +55,10 @@ juce::String PlayfulScreen::getChangeSignature() {
 }
 
 void PlayfulScreen::paint(juce::Graphics &g) {
-    drawBackground(g);
-
-    // fit the 800x480 design inside the component, centred
-    float scale =
-        juce::jmin(getWidth() / designWidth, getHeight() / designHeight);
-    float offsetX = (getWidth() - designWidth * scale) / 2.0f;
-    float offsetY = (getHeight() - designHeight * scale) / 2.0f;
-    g.addTransform(
-        juce::AffineTransform::scale(scale).translated(offsetX, offsetY));
-
     double time = getAnimationTime();
-
-    drawHeader(g, getTitle(), getSubtitle(), getPageLabel());
-
-    {
-        juce::Graphics::ScopedSaveState state(g);
-        g.addTransform(juce::AffineTransform::translation(0, headerHeight));
-        g.reduceClipRegion(0, 0, int(designWidth), int(stageHeight));
-        if (stageShowsStars())
-            drawStars(g, time);
-        paintStage(g, time);
-    }
-
-    drawKnobStrip(g, getKnobs());
+    paintFrame(g, getLocalBounds().toFloat(), getTitle(), getSubtitle(),
+               getPageLabel(), getKnobs(), stageShowsStars(), time,
+               [&](juce::Graphics &stage) { paintStage(stage, time); });
 }
 
 //==============================================================================
