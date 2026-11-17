@@ -1,15 +1,41 @@
-# LMN-3-DAW
+# LMN-3-DAW (extended fork)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-This repository contains the code for the LMN-3-DAW. 
+**This is a fork of [FundamentalFrequency/LMN-3-DAW](https://github.com/FundamentalFrequency/LMN-3-DAW)**, the software for the [LMN-3](https://github.com/FundamentalFrequency) DIY groovebox by Stone Preston. It runs on the same LMN-3 hardware and keeps everything the original does, and adds:
 
-If you would like to support the project, please consider becoming a [sponsor](https://github.com/sponsors/stonepreston).
+| Area | What's new |
+|---|---|
+| Look | Every screen redrawn in a "playful" style: animated characters for each plugin, modifier and sequencer, with the four knob boxes along the bottom matching the four encoders |
+| Projects | Several projects instead of one, with a Projects browser in Settings |
+| Editing | Quantize with swing (Control + Cut), render menu with stems and loop-range renders, sampler fixes |
+| Sound | Built-in **String**, **FM** and **Pulse** synth engines; **Pitch Shift** effect; aux sends **A/B** on the Mixer |
+| MIDI FX | **Arpeggiator**, **scale lock** and **chord** |
+| Modulation | **Step**, **Random**, **Envelope follower** and **MIDI tracker** modulators |
+| Sequencers | **Drums**, **Endless**, **Tombola** and **Pattern** sequencers, and an upgraded **Step** sequencer |
+| Plugins | **VST3** instruments and effects on the encoders, with knob maps and a preset browser |
+| Power | Hold Control + Stop for 3 seconds to save and switch off |
+| Other platforms | A **Windows** version played with the computer keyboard and mouse, and an **Android** phone app with on-screen keys, buttons and encoders |
 
-## Overview Video
-An overview video showcasing the project can be viewed [here](https://www.youtube.com/watch?v=h5UmPTttN1s)
+The original project's [overview video](https://www.youtube.com/watch?v=h5UmPTttN1s) still shows the hardware and the basic workflow. If you'd like to support the original author, consider becoming a [sponsor](https://github.com/sponsors/stonepreston).
 
-## Releases
-Releases can be found [here](https://github.com/FundamentalFrequency/LMN-3-DAW/releases). A release contains executables for 
+## Downloads
+
+Built automatically by GitHub on every change: open the [Actions tab](../../actions), click the newest run with a green tick for the branch you want, and download from **Artifacts** at the bottom:
+- **LMN-3-windows**: unzip and double-click `LMN-3.exe`; press F12 for the keys.
+- **LMN-3-android**: unzip on the phone and open `LMN-3.apk` (allow installing from that app when asked).
+
+For the Raspberry Pi, build from source (below).
+
+## Branches
+
+| Branch | For |
+|---|---|
+| **`lmn3`** (default) | The original LMN-3 hardware (800 × 480 screen). Software changes only. |
+| **`lmn3-v3-wide`** | **Limoncello**, a new hardware design based on the LMN-3 (7.9" 1280 × 400 screen, built-in speakers and mic). Everything in `lmn3`, plus a wide screen layout, a MIC key (record and sample from the built-in mic) and a joystick click (sustain). |
+| `main` | An unchanged copy of the original project. |
+
+## Releases of the original project
+The original project's releases (without the changes in this fork) are [here](https://github.com/FundamentalFrequency/LMN-3-DAW/releases). A release contains executables for 
 x86_64, ARM, and aarch64 architectures. The aarch64 bit version of the application is recommended for running on the Pi. 
 Note that this does require you to run the 64-Bit version of the Raspberry Pi OS if you are not already.
 
