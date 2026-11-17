@@ -16,11 +16,16 @@
 | Power | Hold Control + Stop for 3 seconds to save and switch off |
 | Other platforms | A **Windows** version played with the computer keyboard and mouse, and an **Android** phone app with on-screen keys, buttons and encoders |
 
+<img src="docs/images/tracks.png" width="32%"> <img src="docs/images/fm.png" width="32%"> <img src="docs/images/drums.png" width="32%">
+<img src="docs/images/tombola.png" width="32%"> <img src="docs/images/chord.png" width="32%"> <img src="docs/images/mixer.png" width="32%">
+
+**[See every new feature, with pictures →](FEATURES.md)**
+
 The original project's [overview video](https://www.youtube.com/watch?v=h5UmPTttN1s) still shows the hardware and the basic workflow. If you'd like to support the original author, consider becoming a [sponsor](https://github.com/sponsors/stonepreston).
 
 ## Downloads
 
-Built automatically by GitHub on every change: open the [Actions tab](../../actions), click the newest run with a green tick for the branch you want, and download from **Artifacts** at the bottom:
+Built automatically by GitHub on every change: open the [Actions tab](https://github.com/HotPTgz/LMN-3-DAW/actions), click the newest run with a green tick for the branch you want, and download from **Artifacts** at the bottom:
 - **LMN-3-windows**: unzip and double-click `LMN-3.exe`; press F12 for the keys.
 - **LMN-3-android**: unzip on the phone and open `LMN-3.apk` (allow installing from that app when asked).
 
