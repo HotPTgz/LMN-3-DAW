@@ -14,6 +14,7 @@ The four boxes along the bottom of most screens always match the LMN-3's four en
 - [Mixer](#mixer)
 - [VST3 plugins](#vst3-plugins)
 - [Power off](#power-off)
+- [Sounds: Starter kit and OP-1 converter](#sounds-starter-kit-and-op-1-converter)
 - [Windows and Android versions](#windows-and-android-versions)
 
 ---
@@ -122,6 +123,13 @@ VST3 instruments and effects installed in `~/.vst3` or `/usr/lib/vst3` (for exam
 ## Power off
 
 Hold **Control + Stop** for 3 seconds: the project is saved and the Pi shuts down safely.
+
+## Sounds: Starter kit and OP-1 converter
+
+- **Starter kit:** a free 16-sound drum kit made from scratch ([`drum_kits/Starter`](drum_kits/Starter)), ready for the Drum Sampler.
+- **`tools/op1_to_lmn3.py`:** turns OP-1 drum patches into drum kits, OP-1 sampler patches into samples, and folders of ordinary one-shots into kits, sorted into a sensible key order (kicks first, then snares, claps, hats, toms…).
+
+How to use both: [docs/SAMPLES.md](docs/SAMPLES.md).
 
 ## Windows and Android versions
 

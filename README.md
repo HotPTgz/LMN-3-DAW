@@ -14,6 +14,7 @@
 | Sequencers | **Drums**, **Endless**, **Tombola** and **Pattern** sequencers, and an upgraded **Step** sequencer |
 | Plugins | **VST3** instruments and effects on the encoders, with knob maps and a preset browser |
 | Power | Hold Control + Stop for 3 seconds to save and switch off |
+| Sounds | A free **Starter** drum kit, and a converter for **OP-1 patches** and sample packs ([docs/SAMPLES.md](docs/SAMPLES.md)) |
 | Other platforms | A **Windows** version played with the computer keyboard and mouse, and an **Android** phone app with on-screen keys, buttons and encoders |
 
 <img src="docs/images/tracks.png" width="32%"> <img src="docs/images/fm.png" width="32%"> <img src="docs/images/drums.png" width="32%">
@@ -104,6 +105,8 @@ The first time you run the application, the directories `~/.config/LMN-3/samples
 `~/.config/LMN-3/drum kits` will be automatically created. See the sections below for details on how to add
 synth samples and drum kits to the application.
 
+**The easy way:** see [docs/SAMPLES.md](docs/SAMPLES.md). This fork includes a free **Starter** drum kit ([`drum_kits/Starter`](drum_kits/Starter)) and [`tools/op1_to_lmn3.py`](tools/op1_to_lmn3.py), which turns OP-1 patches (e.g. from [op1.fun](https://op1.fun)) and ordinary sample packs into LMN-3 samples and drum kits, `.yaml` files included.
+
 ### Samples
 Place any audio sample files you wish to use with the Sampler plugin in `~/.config/LMN-3/samples`. 
 
@@ -136,9 +139,7 @@ mappings:
     file_name: "crazy_sample.wav"
 ```
 
-This is a manual process. 53 is the first note in the `+0` octave. You can add mappings for the entire note range from 5 to 124. If you want to make
-a drum kit, you will need to create the directory to store the kit in, add the audio files to it, and then create the
-`.yaml` mapping file. Perhaps someone could make a JUCE application to make this easier (cough...cough).
+53 is the first note in the `+0` octave. You can add mappings for the entire note range from 5 to 124. To skip the manual work, [`tools/op1_to_lmn3.py`](tools/op1_to_lmn3.py) builds the folder and the `.yaml` file for you from a folder of samples (see [docs/SAMPLES.md](docs/SAMPLES.md)).
 
 ## VST3 Plugins
 VST3 plugins in `~/.vst3`, `/usr/lib/vst3` or `/usr/local/lib/vst3` show up under Instruments or Effects in the plugin list. They are scanned once and remembered in `~/.config/LMN-3/plugins.xml`; the folders are only scanned again when a plugin is added, removed or updated. A plugin that crashes the scan is skipped from then on.

@@ -1,0 +1,34 @@
+name: "Starter"
+mappings:
+  - note_number: 53
+    file_name: "kick1.wav"
+  - note_number: 54
+    file_name: "kick2.wav"
+  - note_number: 55
+    file_name: "snare1.wav"
+  - note_number: 56
+    file_name: "snare2.wav"
+  - note_number: 57
+    file_name: "clap1.wav"
+  - note_number: 58
+    file_name: "rim1.wav"
+  - note_number: 59
+    file_name: "hat1.wav"
+  - note_number: 60
+    file_name: "hat2.wav"
+  - note_number: 61
+    file_name: "openhat1.wav"
+  - note_number: 62
+    file_name: "tom1.wav"
+  - note_number: 63
+    file_name: "tom2.wav"
+  - note_number: 64
+    file_name: "tom3.wav"
+  - note_number: 65
+    file_name: "crash1.wav"
+  - note_number: 66
+    file_name: "shaker1.wav"
+  - note_number: 67
+    file_name: "cowbell1.wav"
+  - note_number: 68
+    file_name: "clave1.wav"
