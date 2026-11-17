@@ -125,7 +125,7 @@ Hold **Control + Stop** for 3 seconds: the project is saved and the Pi shuts dow
 
 ## Windows and Android versions
 
-The same app also runs without the LMN-3 hardware, to try it out or to sketch ideas away from it. Download both from the [Actions tab](../../actions) (newest green run → Artifacts).
+The same app also runs without the LMN-3 hardware, to try it out or to sketch ideas away from it. Download both from the [Actions tab](https://github.com/HotPTgz/LMN-3-DAW/actions) (newest green run → Artifacts).
 
 <img src="docs/images/keyboard_help.png" width="49%">
 

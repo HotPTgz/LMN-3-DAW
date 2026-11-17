@@ -25,7 +25,7 @@ The original project's [overview video](https://www.youtube.com/watch?v=h5UmPTtt
 
 ## Downloads
 
-Built automatically by GitHub on every change: open the [Actions tab](../../actions), click the newest run with a green tick for the branch you want, and download from **Artifacts** at the bottom:
+Built automatically by GitHub on every change: open the [Actions tab](https://github.com/HotPTgz/LMN-3-DAW/actions), click the newest run with a green tick for the branch you want, and download from **Artifacts** at the bottom:
 - **LMN-3-windows**: unzip and double-click `LMN-3.exe`; press F12 for the keys.
 - **LMN-3-android**: unzip on the phone and open `LMN-3.apk` (allow installing from that app when asked).
 
