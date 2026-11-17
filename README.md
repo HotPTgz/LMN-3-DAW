@@ -16,6 +16,11 @@
 | Power | Hold Control + Stop for 3 seconds to save and switch off |
 | Other platforms | A **Windows** version played with the computer keyboard and mouse, and an **Android** phone app with on-screen keys, buttons and encoders |
 
+<img src="docs/images/tracks.png" width="32%"> <img src="docs/images/fm.png" width="32%"> <img src="docs/images/drums.png" width="32%">
+<img src="docs/images/tombola.png" width="32%"> <img src="docs/images/chord.png" width="32%"> <img src="docs/images/mixer.png" width="32%">
+
+**[See every new feature, with pictures →](FEATURES.md)**
+
 The original project's [overview video](https://www.youtube.com/watch?v=h5UmPTttN1s) still shows the hardware and the basic workflow. If you'd like to support the original author, consider becoming a [sponsor](https://github.com/sponsors/stonepreston).
 
 ## Downloads
