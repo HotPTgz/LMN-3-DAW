@@ -196,7 +196,7 @@ void PolySynth::render(float *left, float *right, int numSamples,
         if (!v.amp.isActive())
             continue;
 
-        const float gain = 0.3f * (0.4f + 0.6f * v.velocity);
+        const float gain = 0.3f * velocityToGain(v.velocity);
         const float leftGain = gain * (1.0f - (v.pan - 0.5f));
         const float rightGain = gain * (1.0f + (v.pan - 0.5f));
 
@@ -297,7 +297,7 @@ void StringSound::start(float f, float, float velocity, double sr,
         // pick position cutting out the harmonics that have a node there
         int len = int(line.length);
         float smooth = 0.0f, peak = 0.0f;
-        float a = 0.05f + 0.9f * brightness;
+        float a = 0.05f + 0.9f * brightness * (0.6f + 0.4f * velocity);
         for (int i = 0; i < len; i++) {
             float n = random.nextFloat() * 2.0f - 1.0f;
             smooth += a * (n - smooth);
@@ -308,7 +308,9 @@ void StringSound::start(float f, float, float velocity, double sr,
             excitation[size_t(i)] -= excitation[size_t(i - pick)];
         for (int i = 0; i < len; i++)
             peak = juce::jmax(peak, std::abs(excitation[size_t(i)]));
-        float scale = peak > 0 ? (0.5f + 0.5f * velocity) / peak : 0.0f;
+        // loudness follows velocity in PolySynth; here a softer pluck is
+        // only a little darker (less of the bright noise)
+        float scale = peak > 0 ? 1.0f / peak : 0.0f;
         // the newest samples sit just before the write position
         for (int i = 0; i < len; i++)
             line.buffer[size_t(stringBufferSize - len + i)] =

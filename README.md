@@ -103,6 +103,7 @@ These need the [Limoncello Teensy firmware](https://github.com/HotPTgz/Limoncell
 | --- | --- |
 | Joystick click | Sustain, like a sustain pedal, while held (4OSC, String, FM, Pulse) |
 | Control + joystick click | Switches the joystick's up/down mod wheel on or off (the firmware remembers it) |
+| Control + Tempo | Switches key velocity on or off: off plays every note at the same velocity (100). The firmware remembers it |
 | MIC | Arms the built-in mic on the selected track: the next **Record** records sound from it. MIC again turns it off. The mic is never played through the speakers, so it can't howl. |
 | Control + MIC | Samples: make a sound and press MIC again (it stops by itself after 20 s). The silence around it is trimmed. A drum sampler asks which pad to put it on (play the key), a sampler gets it across the keys, and a track with no instrument gets a new sampler. It is always saved in `samples/Recorded` too. |
 

@@ -94,6 +94,16 @@ class PolySynth {
 
     int getNumActiveVoices() const;
 
+    // Key velocity (0-1) -> loudness. Linear in dB, so each step of velocity
+    // changes the level by the same amount: the softest note is
+    // velocityRangeDb quieter than the hardest. (4OSC and the sampler have
+    // their own curves, about 40 dB and 20 dB.)
+    static constexpr float velocityRangeDb = 30.0f;
+    static float velocityToGain(float velocity) {
+        return juce::Decibels::decibelsToGain(
+            -velocityRangeDb * (1.0f - juce::jlimit(0.0f, 1.0f, velocity)));
+    }
+
   private:
     struct Voice {
         std::unique_ptr<VoiceSound> sound;

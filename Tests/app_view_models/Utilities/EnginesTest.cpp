@@ -173,6 +173,34 @@ TEST_P(EngineSoundTest, sustainPedalHoldsReleasedKeys) {
 
 INSTANTIATE_TEST_SUITE_P(Engines, EngineSoundTest, ::testing::Values(0, 1, 2));
 
+TEST_P(EngineSoundTest, velocityChangesLoudnessOverAWideRange) {
+    // hardest vs softest note: about PolySynth::velocityRangeDb apart
+    auto levelAt = [](int engine, float velocity) {
+        auto synth = makeSynth(engine);
+        Rendered out;
+        synth->noteOn(60, velocity);
+        render(*synth, out, 0.3, defaultsFor(engine), openShape());
+        return rms(out.left, size_t(0.05 * sampleRate), size_t(0.25 * sampleRate));
+    };
+    float loud = levelAt(GetParam(), 1.0f);
+    float mid = levelAt(GetParam(), 0.5f);
+    float soft = levelAt(GetParam(), 1.0f / 127.0f);
+    ASSERT_GT(soft, 0.0f);
+    float rangeDb = juce::Decibels::gainToDecibels(loud / soft);
+    EXPECT_GT(rangeDb, PolySynth::velocityRangeDb - 4.0f) << "engine " << GetParam();
+    EXPECT_LT(rangeDb, PolySynth::velocityRangeDb + 8.0f) << "engine " << GetParam();
+    EXPECT_GT(mid, soft);
+    EXPECT_GT(loud, mid);
+}
+
+TEST(EngineSoundTest, velocityToGainIsLinearInDecibels) {
+    EXPECT_FLOAT_EQ(PolySynth::velocityToGain(1.0f), 1.0f);
+    EXPECT_NEAR(juce::Decibels::gainToDecibels(PolySynth::velocityToGain(0.0f)),
+                -PolySynth::velocityRangeDb, 0.01f);
+    EXPECT_NEAR(juce::Decibels::gainToDecibels(PolySynth::velocityToGain(0.5f)),
+                -PolySynth::velocityRangeDb / 2.0f, 0.01f);
+}
+
 TEST(EngineSoundTest, everyFmAlgorithmMakesSound) {
     for (int algorithm = 0; algorithm < 8; algorithm++) {
         float p[8];

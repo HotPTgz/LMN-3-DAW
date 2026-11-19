@@ -83,6 +83,11 @@ void LiveControls::modWheelStateChanged(bool isOn) {
                 1400);
 }
 
+void LiveControls::velocityStateChanged(bool isOn) {
+    showMessage(isOn ? "Key velocity: on" : "Key velocity: off (all notes equal)",
+                1400);
+}
+
 //==============================================================================
 // MIC
 
