@@ -97,7 +97,7 @@ The monitor starts in portrait (400 × 1280). Turn it sideways in Raspberry Pi O
 (use the output name `wlr-randr` lists, and `270` if the picture is upside down).
 
 ### Limoncello controls
-These need the [Limoncello Teensy firmware](https://github.com/HotPTgz/Limoncello/tree/main/firmware) (it sends CC 113–115):
+These need the [Limoncello Teensy firmware](https://github.com/HotPTgz/Limoncello/tree/main/firmware) (it sends CC 113–116):
 
 | Control | What it does |
 | --- | --- |
