@@ -97,7 +97,8 @@ class PolySynth {
     // Key velocity (0-1) -> loudness. Linear in dB, so each step of velocity
     // changes the level by the same amount: the softest note is
     // velocityRangeDb quieter than the hardest. (4OSC and the sampler have
-    // their own curves, about 40 dB and 20 dB.)
+    // their own curves: 4OSC is -20 dB at half velocity and close to silent
+    // at the softest, the sampler spans 20 dB.)
     static constexpr float velocityRangeDb = 30.0f;
     static float velocityToGain(float velocity) {
         return juce::Decibels::decibelsToGain(
