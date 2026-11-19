@@ -182,6 +182,12 @@ void EnginePlugin::applyToBuffer(const tracktion::PluginRenderContext &fc) {
                 synth.noteOn(m.getNoteNumber(), m.getFloatVelocity());
             else if (m.isNoteOff())
                 synth.noteOff(m.getNoteNumber());
+            else if (m.isPitchWheel())
+                synth.setPitchBend(float(m.getPitchWheelValue() - 8192) /
+                                   (m.getPitchWheelValue() >= 8192 ? 8191.0f
+                                                                    : 8192.0f));
+            else if (m.isControllerOfType(1)) // mod wheel
+                synth.setModWheel(float(m.getControllerValue()) / 127.0f);
             else if (m.isSustainPedalOn())
                 synth.setSustain(true);
             else if (m.isSustainPedalOff())

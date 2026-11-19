@@ -73,6 +73,11 @@ class VoiceSound {
                        double sampleRate, const float *p) = 0;
     virtual void stop() {}
     virtual float next(const float *p) = 0;
+    // pitch bend and vibrato: the note plays at its frequency x ratio
+    void setPitchRatio(float ratio) { pitchRatio = ratio; }
+
+  protected:
+    float pitchRatio = 1.0f;
 };
 
 class PolySynth {
@@ -87,6 +92,14 @@ class PolySynth {
     void allNotesOff();
     // sustain pedal: while down, released keys keep sounding
     void setSustain(bool down);
+    // pitch wheel, -1 to +1 (MIDI 0-16383 mapped around the centre)
+    void setPitchBend(float amount);
+    // mod wheel, 0 to 1: vibrato depth
+    void setModWheel(float amount);
+
+    static constexpr float pitchBendSemitones = 2.0f;  // full joystick = +-2
+    static constexpr float vibratoSemitones = 0.5f;    // full mod wheel = +-50 cents
+    static constexpr float vibratoRateHz = 5.5f;
 
     // Adds numSamples of sound to left/right
     void render(float *left, float *right, int numSamples, const float *p,
@@ -117,6 +130,9 @@ class PolySynth {
         bool sustained = false; // key released while the pedal was down
     };
     bool sustainDown = false;
+    float bendTarget = 0.0f, bend = 0.0f; // semitones (bend is smoothed)
+    float modWheel = 0.0f;
+    double vibratoPhase = 0.0;
 
     std::vector<Voice> voices;
     double sampleRate = 44100.0;
@@ -150,7 +166,7 @@ class StringSound : public VoiceSound {
         float last = 0.0f;
         float allpassState = 0.0f;
         float feedback = 0.99f;
-        float tick(float damping, float stiffness);
+        float tick(float damping, float stiffness, float lengthScale);
     };
     Line lines[2];
     float frequency = 220.0f;

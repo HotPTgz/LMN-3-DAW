@@ -171,6 +171,14 @@ void PolySynth::setSustain(bool down) {
         }
 }
 
+void PolySynth::setPitchBend(float amount) {
+    bendTarget = juce::jlimit(-1.0f, 1.0f, amount) * pitchBendSemitones;
+}
+
+void PolySynth::setModWheel(float amount) {
+    modWheel = juce::jlimit(0.0f, 1.0f, amount);
+}
+
 void PolySynth::allNotesOff() {
     sustainDown = false;
     for (auto &v : voices) {
@@ -185,6 +193,23 @@ void PolySynth::render(float *left, float *right, int numSamples,
     voiceLimit = juce::jlimit(1, maxVoices, shape.voices);
     for (int i = 0; i < numSamples; i++)
         left[i] = right[i] = 0.0f;
+
+    // pitch: the bend glides over a few ms (the joystick sends steps), the
+    // vibrato is a sine whose depth is the mod wheel. Updated every 16 samples.
+    const float bendStart = bend;
+    const float bendEnd =
+        bendTarget + (bend - bendTarget) *
+                         std::exp(-float(numSamples) / float(0.005 * sampleRate));
+    const double vibratoStep = vibratoRateHz / sampleRate;
+    auto pitchRatioAt = [&](int sample) {
+        float t = numSamples > 0 ? float(sample) / float(numSamples) : 0.0f;
+        float semis = bendStart + (bendEnd - bendStart) * t;
+        if (modWheel > 0.0f)
+            semis += modWheel * vibratoSemitones *
+                     std::sin(float((vibratoPhase + vibratoStep * sample) *
+                                    juce::MathConstants<double>::twoPi));
+        return std::exp2(semis / 12.0f);
+    };
 
     for (auto &v : voices) {
         if (v.velocity < 0.0f) {
@@ -207,6 +232,7 @@ void PolySynth::render(float *left, float *right, int numSamples,
                 std::pow(2.0f, shape.envAmount * 6.0f * v.amp.getLevel());
             v.filter.setParams(shape.cutoff * open, shape.resonance,
                                sampleRate);
+            v.sound->setPitchRatio(pitchRatioAt(start));
             for (int i = start; i < end; i++) {
                 float s = v.filter.process(v.sound->next(p));
                 s *= v.amp.next(shape, sampleRate);
@@ -219,6 +245,10 @@ void PolySynth::render(float *left, float *right, int numSamples,
             }
         }
     }
+
+    bend = bendEnd;
+    vibratoPhase += vibratoStep * numSamples;
+    vibratoPhase -= std::floor(vibratoPhase);
 
     // remove DC, then limit gently so big chords don't clip
     const float r =
@@ -239,11 +269,13 @@ void PolySynth::render(float *left, float *right, int numSamples,
 // String
 static constexpr int stringBufferSize = 8192;
 
-float StringSound::Line::tick(float damping, float stiffness) {
+float StringSound::Line::tick(float damping, float stiffness,
+                              float lengthScale) {
     const int size = int(buffer.size());
     // the loop filter and allpass add a little delay; take it off the line
     float c = 0.6f * stiffness;
-    float delay = length - (1.0f - damping) - (1.0f - c) / (1.0f + c);
+    float delay =
+        length * lengthScale - (1.0f - damping) - (1.0f - c) / (1.0f + c);
     delay = juce::jlimit(2.0f, float(size - 2), delay);
     float readPos = float(write) - delay;
     while (readPos < 0)
@@ -346,8 +378,10 @@ float StringSound::next(const float *p) {
     const float level = juce::jlimit(0.0f, 1.0f, p[7]);
     const float damping = 0.5f + 0.48f * brightness;
 
-    float s = lines[0].tick(damping, stiffness);
-    float second = lines[1].tick(damping, stiffness);
+    // a shorter string plays higher: bend/vibrato change the line length
+    const float lengthScale = 1.0f / pitchRatio;
+    float s = lines[0].tick(damping, stiffness, lengthScale);
+    float second = lines[1].tick(damping, stiffness, lengthScale);
     float mix = juce::jmin(1.0f, detune * 4.0f);
     s = (s + mix * second) / (1.0f + mix * 0.5f);
 
@@ -413,7 +447,8 @@ float FmSound::next(const float *p) {
 
         double cents = detune * 8.0 * detuneCents[op];
         double inc =
-            frequency * ratios[op] * std::pow(2.0, cents / 1200.0) / sampleRate;
+            frequency * pitchRatio * ratios[op] * std::pow(2.0, cents / 1200.0) /
+            sampleRate;
         phases[op] += inc;
         phases[op] -= std::floor(phases[op]);
     }
@@ -484,7 +519,7 @@ float PulseSound::next(const float *p) {
                                  std::sin(float(lfoPhase) *
                                           juce::MathConstants<float>::twoPi));
 
-    double dt1 = frequency / sampleRate;
+    double dt1 = frequency * pitchRatio / sampleRate;
     double dt2 = dt1 * std::pow(2.0, detune * 20.0 / 1200.0);
     double dtSub = dt1 * 0.5;
 

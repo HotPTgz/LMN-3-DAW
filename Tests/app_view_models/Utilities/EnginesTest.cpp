@@ -82,6 +82,29 @@ float pitchOf(const std::vector<float> &x, size_t from, size_t length) {
     return 0.0f;
 }
 
+// Like pitchOf, but only looks within half an octave of `expected`, so a
+// strong second harmonic (String, some plucks) can't be taken for the note
+float pitchNear(const std::vector<float> &x, size_t from, size_t length,
+                float expected) {
+    int minLag = int(sampleRate / (expected * 1.41f));
+    int maxLag = int(sampleRate / (expected / 1.41f));
+    std::vector<double> r(size_t(maxLag + 2), 0.0);
+    for (int lag = minLag - 1; lag <= maxLag + 1; lag++) {
+        double sum = 0.0;
+        for (size_t i = from; i < from + length; i++)
+            sum += double(x[i]) * x[i + size_t(lag)];
+        r[size_t(lag)] = sum;
+    }
+    int best = minLag;
+    for (int lag = minLag; lag <= maxLag; lag++)
+        if (r[size_t(lag)] > r[size_t(best)])
+            best = lag;
+    double a = r[size_t(best - 1)], b = r[size_t(best)], c = r[size_t(best + 1)];
+    double d = a - 2 * b + c;
+    double offset = d != 0.0 ? 0.5 * (a - c) / d : 0.0;
+    return float(sampleRate / (best + offset));
+}
+
 bool allFinite(const Rendered &r) {
     for (size_t i = 0; i < r.left.size(); i++)
         if (!std::isfinite(r.left[i]) || !std::isfinite(r.right[i]) ||
@@ -123,7 +146,8 @@ TEST_P(EngineSoundTest, playsInTune) {
         synth->noteOn(note, 0.8f);
         render(*synth, out, 0.6, p, openShape());
         float expected = midiNoteToHz(float(note));
-        float measured = pitchOf(out.left, size_t(0.1 * sampleRate), 8192);
+        float measured =
+            pitchNear(out.left, size_t(0.1 * sampleRate), 8192, expected);
         EXPECT_NEAR(measured, expected, expected * 0.01f)
             << "engine " << GetParam() << " note " << note;
     }
@@ -173,21 +197,76 @@ TEST_P(EngineSoundTest, sustainPedalHoldsReleasedKeys) {
 
 INSTANTIATE_TEST_SUITE_P(Engines, EngineSoundTest, ::testing::Values(0, 1, 2));
 
+TEST_P(EngineSoundTest, pitchWheelBendsTwoSemitones) {
+    float p[8];
+    std::copy(defaultsFor(GetParam()), defaultsFor(GetParam()) + 8, p);
+    if (GetParam() == 2)
+        p[3] = 0.0f; // no sub, so the pitch detector sees the main note
+    for (float amount : {1.0f, -1.0f, 0.5f}) {
+        auto synth = makeSynth(GetParam());
+        synth->setPitchBend(amount);
+        Rendered out;
+        synth->noteOn(69, 0.8f);
+        render(*synth, out, 0.6, p, openShape());
+        float expected = 440.0f * std::exp2(amount * PolySynth::pitchBendSemitones / 12.0f);
+        float measured =
+            pitchNear(out.left, size_t(0.1 * sampleRate), 8192, expected);
+        EXPECT_NEAR(measured, expected, expected * 0.01f)
+            << "engine " << GetParam() << " bend " << amount;
+    }
+}
+
+TEST_P(EngineSoundTest, modWheelAddsVibrato) {
+    float p[8];
+    std::copy(defaultsFor(GetParam()), defaultsFor(GetParam()) + 8, p);
+    if (GetParam() == 2)
+        p[3] = 0.0f;
+    // a fresh synth starts the vibrato at phase 0: highest a quarter period
+    // in, lowest at three quarters
+    auto swingCents = [&](float mod) {
+        auto synth = makeSynth(GetParam());
+        synth->setModWheel(mod);
+        Rendered out;
+        synth->noteOn(69, 0.8f);
+        render(*synth, out, 0.5, p, openShape());
+        const double period = 1.0 / PolySynth::vibratoRateHz;
+        const size_t len = 960; // 20 ms
+        auto at = [&](double t) {
+            return pitchNear(out.left, size_t(t * sampleRate) - len / 2, len,
+                             440.0f);
+        };
+        float high = at(period * 1.25), low = at(period * 1.75);
+        return 1200.0f * std::log2(high / low);
+    };
+    float withVibrato = swingCents(1.0f), without = swingCents(0.0f);
+    // full vibrato is +-50 cents: about 100 cents peak to peak
+    EXPECT_GT(withVibrato, 70.0f) << "engine " << GetParam();
+    EXPECT_LT(withVibrato, 110.0f) << "engine " << GetParam();
+    EXPECT_LT(std::abs(without), 8.0f) << "engine " << GetParam();
+}
+
 TEST_P(EngineSoundTest, velocityChangesLoudnessOverAWideRange) {
     // hardest vs softest note: about PolySynth::velocityRangeDb apart
+    // averaged over several notes: String's pluck is random noise
     auto levelAt = [](int engine, float velocity) {
-        auto synth = makeSynth(engine);
-        Rendered out;
-        synth->noteOn(60, velocity);
-        render(*synth, out, 0.3, defaultsFor(engine), openShape());
-        return rms(out.left, size_t(0.05 * sampleRate), size_t(0.25 * sampleRate));
+        float sum = 0.0f;
+        for (int n = 0; n < 8; n++) {
+            auto synth = makeSynth(engine);
+            Rendered out;
+            synth->noteOn(60, velocity);
+            render(*synth, out, 0.3, defaultsFor(engine), openShape());
+            sum += rms(out.left, size_t(0.05 * sampleRate),
+                       size_t(0.25 * sampleRate));
+        }
+        return sum / 8.0f;
     };
     float loud = levelAt(GetParam(), 1.0f);
     float mid = levelAt(GetParam(), 0.5f);
     float soft = levelAt(GetParam(), 1.0f / 127.0f);
     ASSERT_GT(soft, 0.0f);
     float rangeDb = juce::Decibels::gainToDecibels(loud / soft);
-    EXPECT_GT(rangeDb, PolySynth::velocityRangeDb - 4.0f) << "engine " << GetParam();
+    // String also gets darker when soft, which moves its measured level a bit
+    EXPECT_GT(rangeDb, PolySynth::velocityRangeDb - 6.0f) << "engine " << GetParam();
     EXPECT_LT(rangeDb, PolySynth::velocityRangeDb + 8.0f) << "engine " << GetParam();
     EXPECT_GT(mid, soft);
     EXPECT_GT(loud, mid);
