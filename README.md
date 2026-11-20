@@ -6,6 +6,8 @@
 <img src="docs/images/tracks.png" width="32%"> <img src="docs/images/fm.png" width="32%"> <img src="docs/images/drums.png" width="32%">
 <img src="docs/images/tombola.png" width="32%"> <img src="docs/images/chord.png" width="32%"> <img src="docs/images/mixer.png" width="32%">
 
+**Try it without the hardware:** [⬇ Windows](https://github.com/HotPTgz/LMN-3-DAW/releases/download/latest-lmn3/LMN-3-windows.zip) · [⬇ Android phone](https://github.com/HotPTgz/LMN-3-DAW/releases/download/latest-lmn3/LMN-3-android.apk) · [all downloads](https://github.com/HotPTgz/LMN-3-DAW/releases/tag/latest-lmn3) (always the newest build)
+
 **Contents:** [Install or update](#install-or-update-on-your-lmn-3) · [Windows and Android](#windows-and-android) · [What's new](#whats-new) · [Sounds](#sounds-samples-and-drum-kits) · [Settings](#settings-configyaml) · [Branches](#branches) · [Credits](#thanks)
 
 ## Install or update on your LMN-3
@@ -77,15 +79,18 @@ Only the parts that changed are rebuilt.
 
 ## Windows and Android
 
-The same app runs without the LMN-3 hardware, to try it out or sketch ideas away from it. GitHub builds both automatically. Open the [Actions tab](https://github.com/HotPTgz/LMN-3-DAW/actions), click the newest run with a green tick for the `lmn3` branch, and download from **Artifacts** at the bottom.
+The same app runs without the LMN-3 hardware, to try it out or sketch ideas away from it. GitHub builds both automatically every time the code changes and puts them on the [latest release](https://github.com/HotPTgz/LMN-3-DAW/releases/tag/latest-lmn3), so these links always give the newest version:
+
+- **Windows:** [LMN-3-windows.zip](https://github.com/HotPTgz/LMN-3-DAW/releases/download/latest-lmn3/LMN-3-windows.zip)
+- **Android phone:** [LMN-3-android.apk](https://github.com/HotPTgz/LMN-3-DAW/releases/download/latest-lmn3/LMN-3-android.apk)
 
 <img src="docs/images/keyboard_help.png" width="49%">
 
-- **LMN-3-windows:** unzip it and double-click `LMN-3.exe`. If Windows says it protected your PC, click **More info**, then **Run anyway**. The computer keyboard is the LMN-3: two rows of letters are the 24 keys, the F-keys are the buttons, and scrolling over a knob box turns that encoder. **F12** shows the cheat sheet above. Sounds go in `%APPDATA%\LMN-3`.
+- **Windows:** unzip it and double-click `LMN-3.exe`. If Windows says it protected your PC, click **More info**, then **Run anyway**. The computer keyboard is the LMN-3: two rows of letters are the 24 keys, the F-keys are the buttons, and scrolling over a knob box turns that encoder. **F12** shows the cheat sheet above. Sounds go in `%APPDATA%\LMN-3`.
 
 <img src="docs/images/phone.png" width="98%">
 
-- **LMN-3-android:** unzip it on the phone and open `LMN-3.apk`, allowing installs from that app when asked. Hold the phone sideways. The LMN-3 screen is in the middle, its buttons on both sides and two octaves of multi-touch keys below. Drag a knob box to turn an encoder and tap it to press. **Big screen** hides the keys. Sounds go in `Android/data/com.fundamentalfrequency.lmn3/files/LMN-3`, visible when the phone is plugged into a computer. VST3 plugins aren't available on Android.
+- **Android:** download the `.apk` on the phone and open it, allowing installs from your browser when asked. A newer version installs over the old one and keeps your projects. Hold the phone sideways. The LMN-3 screen is in the middle, its buttons on both sides and two octaves of multi-touch keys below. Drag a knob box to turn an encoder and tap it to press. **Big screen** hides the keys. Sounds go in `Android/data/com.fundamentalfrequency.lmn3/files/LMN-3`, visible when the phone is plugged into a computer. VST3 plugins aren't available on Android.
 
 ## What's new
 
