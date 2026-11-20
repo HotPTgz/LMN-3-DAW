@@ -1,7 +1,7 @@
 # LMN-3-DAW (extended fork)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-**A bigger, friendlier software for the [LMN-3](https://github.com/FundamentalFrequency) DIY groovebox.** This is a fork of [FundamentalFrequency/LMN-3-DAW](https://github.com/FundamentalFrequency/LMN-3-DAW) by Stone Preston. It runs on the same LMN-3 you already built, with no hardware changes, and keeps everything the original does. On top of that, every screen is redrawn, and it adds six new synths and a drum synth, nine sequencers, ten new effects, seven MIDI effects, more modulation, VST3 plugins, several projects, and Windows and Android versions.
+**A bigger, friendlier software for the [LMN-3](https://github.com/FundamentalFrequency) DIY groovebox.** This is a fork of [FundamentalFrequency/LMN-3-DAW](https://github.com/FundamentalFrequency/LMN-3-DAW) by Stone Preston. It runs on the same LMN-3 you already built, with no hardware changes, and keeps everything the original does. On top of that, every screen is redrawn, and it adds six new synths and a drum synth, nine sequencers, seven new effects, seven MIDI effects, more modulation, VST3 plugins, several projects, and Windows and Android versions.
 
 <img src="docs/images/tracks.png" width="32%"> <img src="docs/images/fm.png" width="32%"> <img src="docs/images/drums.png" width="32%">
 <img src="docs/images/tombola.png" width="32%"> <img src="docs/images/chord.png" width="32%"> <img src="docs/images/mixer.png" width="32%">
