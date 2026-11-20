@@ -20,7 +20,8 @@ class AvailableSequencersListViewModel {
 
   public:
     juce::StringArray sequencerNames =
-        juce::StringArray({"Step", "Drums", "Endless", "Tombola", "Pattern"});
+        juce::StringArray({"Step", "Drums", "Endless", "Tombola", "Pattern",
+                           "Euclidean", "Finger", "Chords", "Turing"});
     ItemListState itemListState;
 };
 

@@ -141,6 +141,8 @@ namespace app_view_models {
 #include "Edit/Sequencers/EndlessSequencerViewModel.h"
 #include "Edit/Sequencers/TombolaSequencerViewModel.h"
 #include "Edit/Sequencers/PatternSequencerViewModel.h"
+#include "Edit/Sequencers/MoreSequencers.h"
+#include "Edit/Sequencers/MoreSequencerViewModels.h"
 
 // Mixer
 #include "Edit/Mixer/MixerViewModel.h"

@@ -24,6 +24,7 @@ namespace internal_plugins {
     class StrumPlugin;
     class HumanisePlugin;
     class MidiEchoPlugin;
+    class FingerPlugin;
     class AudioFxPlugin;
     class TapePlugin;
     class LofiPlugin;

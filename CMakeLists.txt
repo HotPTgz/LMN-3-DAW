@@ -109,6 +109,7 @@ target_sources(LMN-3  PRIVATE
     Source/Views/Edit/Tracks/Track/Clips/RecordingClipComponent.cpp
     Source/Views/Edit/Sequencers/AvailableSequencersListView.cpp
     Source/Views/Edit/Sequencers/PlayfulSequencerViews.cpp
+    Source/Views/Edit/Sequencers/MoreSequencerViews.cpp
     Source/Views/Edit/Sequencers/StepSequencer/StepSequencerView.cpp
     Source/Views/Edit/Sequencers/StepSequencer/StepSequencerGridComponent.cpp
     Source/Views/Edit/Mixer/MixerView.cpp

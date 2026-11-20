@@ -70,6 +70,8 @@
 #include "Edit/Sequencers/EndlessSequencerViewModel.cpp"
 #include "Edit/Sequencers/TombolaSequencerViewModel.cpp"
 #include "Edit/Sequencers/PatternSequencerViewModel.cpp"
+#include "Edit/Sequencers/MoreSequencers.cpp"
+#include "Edit/Sequencers/MoreSequencerViewModels.cpp"
 
 // Mixer
 #include "Edit/Mixer/MixerViewModel.cpp"

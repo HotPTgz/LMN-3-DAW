@@ -1142,4 +1142,85 @@ drumSynth(IntGetter selectedPad, std::function<void(int)> selectPad,
                                             describe);
 }
 
+//==============================================================================
+// Finger: twelve keys, each a pattern that plays while held
+class FingerScene : public PlayfulScene {
+  public:
+    FingerScene(IntGetter base, IntGetter sel, std::function<void(int)> sl,
+                std::function<juce::uint32()> held,
+                std::function<std::array<int, 3>(int)> slot,
+                juce::StringArray names,
+                std::function<int(int, int, int, int)> hit)
+        : baseKey(base), selected(sel), select(sl), heldMask(held),
+          slotSettings(slot), patternNames(names), hitAt(hit) {}
+    String getSubtitle() override { return "hold keys to play"; }
+    void notePlayed(int note) override {
+        int slot = note - baseKey();
+        if (juce::isPositiveAndBelow(slot, 12))
+            select(slot);
+    }
+    void paint(Graphics &g, double t) override {
+        static const Colour colours[] = {Colours::pink,  Colours::yellow,
+                                         Colours::green, Colours::blue,
+                                         Colours::purple, Colours::orange};
+        auto held = heldMask();
+        int sel = selected();
+        int step = int(t * 8.0) % 16; // 16ths at 120 bpm, for the picture
+        for (int k = 0; k < 12; k++) {
+            float x = 24 + (k % 6) * 124.0f, y = 18 + (k / 6) * 140.0f;
+            bool on = (held >> k) & 1u;
+            auto settings = slotSettings(k);
+            auto col = colours[k % 6];
+            g.setColour(on ? Colours::dim : Colours::panel);
+            g.fillRoundedRectangle(x, y, 112, 124, 18);
+            if (on || k == sel) {
+                g.setColour(on ? Colours::cream : Colours::yellow.withAlpha(0.7f));
+                g.drawRoundedRectangle(x + 1.5f, y + 1.5f, 109, 121, 18,
+                                       on ? 3.0f : 2.0f);
+            }
+            g.setColour(col);
+            fillEllipseCentred(g, x + 24, y + 26, 14, 14);
+            drawFace(g, x + 24, y + 26, 0.55f, on ? Mood::sing : Mood::smile, t);
+            text(g, patternNames[settings[0]], x + 44, y + 24, 12, Colours::text,
+                 true);
+            text(g,
+                 juce::MidiMessage::getMidiNoteName(baseKey() + k, true, true, 4) +
+                     utf8(" · ") + String(settings[1] + 1) + "/4",
+                 x + 44, y + 40, 11, Colours::muted);
+            // the pattern: kick, snare, hat lanes over 16 steps
+            for (int lane = 0; lane < 3; lane++) {
+                static const int roles[] = {4, 1, 0}; // hat, snare, kick
+                for (int s = 0; s < 16; s++) {
+                    int v = hitAt(settings[0], settings[1], roles[lane], s);
+                    if (v <= 0)
+                        continue;
+                    bool now = on && s == step;
+                    g.setColour(now ? Colours::cream
+                                    : col.withAlpha(0.45f + v / 255.0f));
+                    g.fillRoundedRectangle(x + 10 + s * 5.8f, y + 62 + lane * 18.0f,
+                                           4, 14, 2);
+                }
+            }
+        }
+    }
+
+  private:
+    IntGetter baseKey, selected;
+    std::function<void(int)> select;
+    std::function<juce::uint32()> heldMask;
+    std::function<std::array<int, 3>(int)> slotSettings;
+    juce::StringArray patternNames;
+    std::function<int(int, int, int, int)> hitAt;
+};
+
+std::unique_ptr<PlayfulScene>
+finger(IntGetter baseKey, IntGetter selectedSlot, std::function<void(int)> select,
+       std::function<juce::uint32()> heldMask,
+       std::function<std::array<int, 3>(int)> slotSettings,
+       juce::StringArray patternNames,
+       std::function<int(int, int, int, int)> hit) {
+    return std::make_unique<FingerScene>(baseKey, selectedSlot, select, heldMask,
+                                         slotSettings, patternNames, hit);
+}
+
 } // namespace PlayfulScenes

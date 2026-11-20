@@ -875,6 +875,50 @@ createPlayfulPluginView(tracktion::Plugin *plugin,
             vm);
     }
 
+    if (auto fing = dynamic_cast<FingerPlugin *>(plugin)) {
+        fing->updateKitNotes();
+        std::vector<Param> params;
+        params.push_back(fromParameter(fing->baseKey, "KEY", {}, 1.0f));
+        static const char *labels[] = {"PATTERN", "VARIATION", "LENGTH"};
+        for (int which = 0; which < 3; which++) {
+            Param p;
+            p.label = labels[which];
+            p.normalised = [fing, which] {
+                return fing->getSlotParameter(fing->selectedSlot, which)
+                    ->getCurrentNormalisedValue();
+            };
+            p.text = [fing, which] {
+                return fing->getSlotParameter(fing->selectedSlot, which)
+                    ->getCurrentValueAsString();
+            };
+            p.nudge = [fing, which](int direction) {
+                auto param = fing->getSlotParameter(fing->selectedSlot, which);
+                param->setParameter(param->getValueRange().clipValue(
+                                        param->getCurrentBaseValue() + direction),
+                                    juce::sendNotification);
+            };
+            params.push_back(p);
+        }
+        return screen(
+            mcm, "Finger", std::move(params),
+            S::finger(
+                [fing] { return juce::roundToInt(fing->baseKey->getCurrentValue()); },
+                [fing] { return fing->selectedSlot.load(); },
+                [fing](int slot) { fing->selectedSlot = slot; },
+                [fing] { return fing->heldMask.load(); },
+                [fing](int slot) {
+                    std::array<int, 3> a;
+                    for (int which = 0; which < 3; which++)
+                        a[size_t(which)] = juce::roundToInt(
+                            fing->getSlotParameter(slot, which)->getCurrentValue());
+                    return a;
+                },
+                midifx::Finger::getPatternNames(),
+                [](int pattern, int variation, int role, int step) {
+                    return midifx::Finger::hit(pattern, variation, role, step);
+                }));
+    }
+
     if (auto rep = dynamic_cast<NoteRepeatPlugin *>(plugin)) {
         auto vm = midiFxViewModel(rep);
         return screen(

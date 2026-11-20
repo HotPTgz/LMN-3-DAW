@@ -143,6 +143,15 @@ drumSynth(IntGetter selectedPad, std::function<void(int)> selectPad,
           std::function<std::vector<float>(int)> preview,
           std::function<String(int)> describe);
 
+// Finger: slotSettings(slot) = {pattern, variation, length};
+// hit(pattern, variation, role, step) = velocity or 0
+std::unique_ptr<PlayfulScene>
+finger(IntGetter baseKey, IntGetter selectedSlot, std::function<void(int)> select,
+       std::function<juce::uint32()> heldMask,
+       std::function<std::array<int, 3>(int)> slotSettings,
+       juce::StringArray patternNames,
+       std::function<int(int, int, int, int)> hit);
+
 // any other plugin or modifier
 std::unique_ptr<PlayfulScene> generic(TextGetter subtitle);
 
