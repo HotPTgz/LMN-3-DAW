@@ -256,11 +256,32 @@ void ArpEngine::reset(tracktion::MidiMessageArray &midi, double time) {
 void ArpEngine::process(tracktion::MidiMessageArray &midi,
                         double blockStartBeat, double beatsPerSecond,
                         double blockSeconds, const Settings &settings) {
-    // Take the incoming notes out of the buffer, updating the held notes
+    // Take the incoming notes out of the buffer. When the song starts, loops
+    // or jumps, the engine flags the block as "all notes off" and the clip
+    // sends its notes in that same block, so clear the old state first and
+    // then take the new notes: dropping them silenced recorded arpeggios.
     tracktion::MidiMessageArray passThrough;
+    std::vector<juce::MidiMessage> notes;
     bool hadAllNotesOff = midi.isAllNotesOff;
 
     for (auto &m : midi) {
+        if (m.isNoteOn() || m.isNoteOff()) {
+            notes.push_back(m);
+        } else {
+            if (m.isAllNotesOff() || m.isAllSoundOff())
+                hadAllNotesOff = true;
+            passThrough.add(m);
+        }
+    }
+
+    midi.clear();
+    midi.isAllNotesOff = hadAllNotesOff;
+    midi.mergeFrom(passThrough);
+
+    if (hadAllNotesOff)
+        reset(midi, 0.0);
+
+    for (auto &m : notes) {
         if (m.isNoteOn()) {
             midiChannel = m.getChannel();
             // with latch, a new chord after all keys were released replaces
@@ -286,21 +307,7 @@ void ArpEngine::process(tracktion::MidiMessageArray &midi,
                     if (held.getReference(i).note == m.getNoteNumber())
                         held.remove(i);
             }
-        } else if (m.isAllNotesOff() || m.isAllSoundOff()) {
-            hadAllNotesOff = true;
-            passThrough.add(m);
-        } else {
-            passThrough.add(m);
         }
-    }
-
-    midi.clear();
-    midi.isAllNotesOff = hadAllNotesOff;
-    midi.mergeFrom(passThrough);
-
-    if (hadAllNotesOff) {
-        reset(midi, 0.0);
-        return;
     }
 
     // latch turned off while nothing is held down

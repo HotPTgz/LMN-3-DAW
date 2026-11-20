@@ -197,6 +197,31 @@ TEST_F(ArpEngineTest, latchKeepsPlayingAndNewChordReplaces) {
     EXPECT_EQ(noteOns(events(block3)), std::vector<int>({62, 62, 62, 62}));
 }
 
+// When playback starts or loops, the engine marks the block "all notes off"
+// and the clip's notes arrive in that same block: they must still play.
+TEST_F(ArpEngineTest, notesThatArriveWithAllNotesOffStillPlay) {
+    tracktion::MidiMessageArray first;
+    press(first, {60, 64, 67});
+    engine.process(first, 0.0, 2.0, 0.5, settings);
+    first.clear();
+
+    tracktion::MidiMessageArray loop; // the song loops back to beat 0
+    loop.isAllNotesOff = true;
+    press(loop, {62, 65});
+    engine.process(loop, 0.0, 2.0, 0.5, settings);
+    EXPECT_EQ(noteOns(events(loop)), std::vector<int>({62, 65, 62, 65}));
+}
+
+TEST_F(ArpEngineTest, latchedChordFromAClipPlaysAfterAllNotesOff) {
+    settings.latch = true;
+    tracktion::MidiMessageArray midi;
+    midi.isAllNotesOff = true;
+    press(midi, {60, 64}, 0.0);
+    release(midi, {60, 64}, 0.01);
+    engine.process(midi, 0.0, 2.0, 0.5, settings);
+    EXPECT_EQ(noteOns(events(midi)), std::vector<int>({60, 64, 60, 64}));
+}
+
 TEST_F(ArpEngineTest, followsTheGridWhenStartedMidBeat) {
     // block starts at beat 0.1, so the first step is at beat 0.25
     tracktion::MidiMessageArray midi;
