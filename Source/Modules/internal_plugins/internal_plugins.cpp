@@ -7,3 +7,5 @@
 #include "MidiFx/MoreMidiFx.cpp"
 #include "Engines/EngineDsp.cpp"
 #include "Engines/EnginePlugins.cpp"
+#include "Effects/FxDsp.cpp"
+#include "Effects/FxPlugins.cpp"

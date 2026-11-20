@@ -97,6 +97,18 @@ class GuiAppApplication : public juce::JUCEApplication {
         engine.getPluginManager()
             .createBuiltInType<internal_plugins::MidiEchoPlugin>();
         engine.getPluginManager()
+            .createBuiltInType<internal_plugins::TapePlugin>();
+        engine.getPluginManager()
+            .createBuiltInType<internal_plugins::LofiPlugin>();
+        engine.getPluginManager()
+            .createBuiltInType<internal_plugins::DrivePlugin>();
+        engine.getPluginManager()
+            .createBuiltInType<internal_plugins::ResonantFilterPlugin>();
+        engine.getPluginManager()
+            .createBuiltInType<internal_plugins::DuckerPlugin>();
+        engine.getPluginManager()
+            .createBuiltInType<internal_plugins::BeatRepeatPlugin>();
+        engine.getPluginManager()
             .createBuiltInType<internal_plugins::StringEnginePlugin>();
         engine.getPluginManager()
             .createBuiltInType<internal_plugins::FmEnginePlugin>();

@@ -103,13 +103,14 @@ TEST_F(AvailablePluginsViewModelTest, setSelectedPluginIndexEffects) {
     EXPECT_EQ(viewModel.getSelectedPluginIndex(), 2);
     viewModel.setSelectedPluginIndex(6);
     EXPECT_EQ(viewModel.getSelectedPluginIndex(), 6);
-    // 8 built-in effects now that Pitch Shift is included
-    viewModel.setSelectedPluginIndex(7);
-    EXPECT_EQ(viewModel.getSelectedPluginIndex(), 7);
-    viewModel.setSelectedPluginIndex(8);
-    EXPECT_EQ(viewModel.getSelectedPluginIndex(), 7);
+    // 14 built-in effects: the 8 Tracktion ones plus Filter, Drive, Tape,
+    // Lo-fi, Ducker and Beat Repeat
+    viewModel.setSelectedPluginIndex(13);
+    EXPECT_EQ(viewModel.getSelectedPluginIndex(), 13);
+    viewModel.setSelectedPluginIndex(14);
+    EXPECT_EQ(viewModel.getSelectedPluginIndex(), 13);
     viewModel.setSelectedPluginIndex(100);
-    EXPECT_EQ(viewModel.getSelectedPluginIndex(), 7);
+    EXPECT_EQ(viewModel.getSelectedPluginIndex(), 13);
 }
 
 TEST_F(AvailablePluginsViewModelTest, getSelectedCategory) {

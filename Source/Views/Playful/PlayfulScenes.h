@@ -96,6 +96,30 @@ std::unique_ptr<PlayfulScene> midiEcho(TextGetter timeText, Getter timeBeats,
                                        IntGetter repeats, Getter decay,
                                        IntGetter transpose);
 
+// Newer effects (PlayfulScenesMore.cpp)
+std::unique_ptr<PlayfulScene> tape(Getter wow, Getter flutter, Getter saturate,
+                                   Getter hiss, Getter wobble);
+std::unique_ptr<PlayfulScene> lofi(Getter bits, Getter rateHz, Getter noise,
+                                   Getter mix);
+// shape(x, type): the clipping curve
+std::unique_ptr<PlayfulScene> drive(Getter driveDb, Getter tone, IntGetter type,
+                                    TextGetter typeName, Getter mix,
+                                    std::function<float(float, int)> shape);
+std::unique_ptr<PlayfulScene>
+resonantFilter(Getter liveCutoff, Getter resonance, Getter envelope, Getter lfo,
+               IntGetter type, juce::StringArray typeNames,
+               TextGetter lfoRateText);
+// gainAt(seconds since a hit)
+std::unique_ptr<PlayfulScene> ducker(TextGetter sourceName,
+                                     std::function<bool()> followsBeat,
+                                     std::function<float(float)> gainAt,
+                                     Getter liveGain);
+// repeats: count, or -1 while held. liveRepeat: index, -1 off, -2 waiting
+std::unique_ptr<PlayfulScene> beatRepeat(TextGetter lengthText,
+                                         IntGetter repeats, Getter decay,
+                                         Getter pitch, IntGetter liveRepeat,
+                                         std::function<void(bool)> setActive);
+
 // any other plugin or modifier
 std::unique_ptr<PlayfulScene> generic(TextGetter subtitle);
 
