@@ -134,6 +134,46 @@ class EchoEngine {
     double now = 0.0;
 };
 
+
+//==============================================================================
+// Finger: each key plays a drum pattern while it is held (OP-1 style)
+namespace Finger {
+constexpr int numSlots = 12, numRoles = 8;
+// kick, snare, clap, rim, hat, open hat, tom, perc
+const juce::StringArray &getRoleNames();
+const juce::StringArray &getPatternNames();
+const juce::StringArray &getLengthNames(); // 1/2 bar, 1 bar, 2 bars
+int lengthSteps(int lengthIndex);
+// the hit of a role at a step (0 none, else velocity)
+int hit(int pattern, int variation, int role, int step);
+} // namespace Finger
+
+class FingerEngine {
+  public:
+    struct Slot {
+        int pattern = 0, variation = 0, length = 1;
+    };
+    struct Settings {
+        int baseKey = 54; // the first of the 12 pattern keys
+        std::array<Slot, Finger::numSlots> slots;
+        std::array<int, Finger::numRoles> notes{53, 54, 55, 56, 57, 58, 59, 60};
+    };
+    void process(tracktion::MidiMessageArray &midi, double blockStartBeat,
+                 double beatsPerSecond, double blockSeconds,
+                 const Settings &settings);
+    juce::uint32 getHeldMask() const { return heldMask; }
+    int getLastSlot() const { return lastSlot; }
+
+  private:
+    juce::uint32 heldMask = 0;
+    int lastSlot = 0, channel = 10;
+    double lastStepBeat = -1.0e9;
+    struct Off {
+        int note;
+        double beat;
+    };
+    std::vector<Off> offs;
+};
 } // namespace midifx
 
 //==============================================================================
@@ -220,6 +260,42 @@ class MidiEchoPlugin : public MidiFxPlugin {
   private:
     midifx::EchoEngine engine;
     tracktion::tempo::Sequence::Position tempoPosition;
+};
+
+
+class FingerPlugin : public MidiFxPlugin {
+  public:
+    explicit FingerPlugin(tracktion::PluginCreationInfo info);
+    ~FingerPlugin() override;
+    static const char *getPluginName() { return NEEDS_TRANS("Finger"); }
+    static const char *xmlTypeName;
+    juce::String getName() override { return TRANS("Finger"); }
+    juce::String getPluginType() override { return xmlTypeName; }
+    juce::String getShortName(int) override { return "Finger"; }
+    juce::String getSelectableDescription() override { return getName(); }
+    void initialise(const tracktion::PluginInitialisationInfo &) override;
+    void applyToBuffer(const tracktion::PluginRenderContext &) override;
+
+    // looks at the track's drum kit to find each role's note
+    void updateKitNotes();
+    midifx::FingerEngine::Settings getSettings() const;
+    tracktion::AutomatableParameter *getSlotParameter(int slot, int which) const;
+
+    juce::CachedValue<float> baseKeyValue;
+    tracktion::AutomatableParameter::Ptr baseKey;
+    std::atomic<int> selectedSlot{0};
+    std::atomic<juce::uint32> heldMask{0};
+
+  private:
+    juce::CachedValue<float> slotValues[midifx::Finger::numSlots][3];
+    tracktion::AutomatableParameter *slotParams[midifx::Finger::numSlots][3]{};
+    std::array<int, midifx::Finger::numRoles> kitNotes{53, 54, 55, 56,
+                                                       57, 58, 59, 60};
+    juce::SpinLock kitLock;
+    midifx::FingerEngine engine;
+    int lastReported = 0;
+    tracktion::tempo::Sequence::Position tempoPosition;
+    double freeRunningBeat = 0.0;
 };
 
 } // namespace internal_plugins

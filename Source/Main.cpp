@@ -97,6 +97,8 @@ class GuiAppApplication : public juce::JUCEApplication {
         engine.getPluginManager()
             .createBuiltInType<internal_plugins::MidiEchoPlugin>();
         engine.getPluginManager()
+            .createBuiltInType<internal_plugins::FingerPlugin>();
+        engine.getPluginManager()
             .createBuiltInType<internal_plugins::TapePlugin>();
         engine.getPluginManager()
             .createBuiltInType<internal_plugins::LofiPlugin>();

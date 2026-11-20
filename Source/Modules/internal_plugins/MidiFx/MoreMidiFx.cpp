@@ -347,6 +347,198 @@ void EchoEngine::process(tracktion::MidiMessageArray &midi,
     midi.sortByTimestamp();
 }
 
+
+//==============================================================================
+namespace Finger {
+const juce::StringArray &getRoleNames() {
+    static juce::StringArray names{"kick", "snare", "clap",     "rim",
+                                   "hat",  "open hat", "tom", "perc"};
+    return names;
+}
+const juce::StringArray &getPatternNames() {
+    static juce::StringArray names{"Four floor", "Boom bap",  "Half time",
+                                   "Shuffle",    "Breakbeat", "Dembow",
+                                   "Two step",   "Trap",      "Disco",
+                                   "Bossa",      "Fill A",    "Fill B"};
+    return names;
+}
+const juce::StringArray &getLengthNames() {
+    static juce::StringArray names{"1/2 bar", "1 bar", "2 bars"};
+    return names;
+}
+int lengthSteps(int index) {
+    static const int steps[] = {8, 16, 32};
+    return steps[juce::jlimit(0, 2, index)];
+}
+
+// 16 steps per role: x accent, o normal, - rest.
+// Roles: kick, snare, clap, rim, hat, open hat, tom, perc
+static const char *const patterns[12][numRoles] = {
+    // Four floor
+    {"x---x---x---x---", "----------------", "----x-------x---", "----------------",
+     "--x---x---x---x-", "----------------", "----------------", "----------------"},
+    // Boom bap
+    {"x------o--x-----", "----x-------x---", "----------------", "----------------",
+     "x-o-x-o-x-o-x-o-", "----------------", "----------------", "----------------"},
+    // Half time
+    {"x-----o---------", "--------x-------", "----------------", "------------o---",
+     "x-o-x-o-x-o-x-o-", "----------------", "----------------", "----------------"},
+    // Shuffle
+    {"x-----o-x-------", "----x-------x---", "----------------", "----------------",
+     "x--ox--ox--ox--o", "----------------", "----------------", "----------------"},
+    // Breakbeat
+    {"x-x-------x-----", "----x--o-o--x--o", "----------------", "----------------",
+     "x-x-x-x-x-x-x-x-", "----------------", "----------------", "----------------"},
+    // Dembow
+    {"x---x---x---x---", "---x--x----x--x-", "----------------", "----------------",
+     "o-o-o-o-o-o-o-o-", "----------------", "----------------", "----------------"},
+    // Two step
+    {"x------x--o-----", "----x-------x---", "----------------", "-o-------o------",
+     "--x---xo--x---x-", "----------------", "----------------", "----------------"},
+    // Trap
+    {"x------x--x-----", "--------x-------", "----------------", "----------------",
+     "x-o-x-oox-o-xooo", "----------------", "----------------", "----------------"},
+    // Disco
+    {"x---x---x---x---", "----x-------x---", "----------------", "----------------",
+     "x---x---x---x---", "--x---x---x---x-", "----------------", "----------------"},
+    // Bossa
+    {"x--o--x-x--o--x-", "----------------", "----------------", "x--x--x---x--x--",
+     "x-o-x-o-x-o-x-o-", "----------------", "----------------", "----------------"},
+    // Fill A
+    {"x-------x-------", "----x-o-xoxox-xx", "------------x---", "----------------",
+     "x-x-x-x---------", "----------------", "----------o-x-x-", "----------------"},
+    // Fill B
+    {"x---------------", "xoxo----xoxo----", "----------------", "----------------",
+     "----------------", "----------------", "----xoxo----xoxo", "x---------------"},
+};
+
+static int baseHit(int pattern, int role, int step) {
+    char c = patterns[juce::jlimit(0, 11, pattern)][role][step & 15];
+    return c == 'x' ? 115 : c == 'o' ? 80 : 0;
+}
+
+int hit(int pattern, int variation, int role, int step) {
+    if (role < 0 || role >= numRoles)
+        return 0;
+    step &= 15;
+    int v = baseHit(pattern, role, step);
+    switch (variation) {
+    case 1: // busier: 16th hats and ghost snares
+        if (role == 4 && v == 0 && (step % 2) == 1)
+            return 55;
+        if (role == 1 && v == 0 && (step == 7 || step == 15))
+            return 45;
+        return v;
+    case 2: // open hats on the off-beats, an extra kick
+        if (role == 5 && (step % 4) == 2)
+            return 90;
+        if (role == 4 && (step % 4) == 2)
+            return 0;
+        if (role == 0 && v == 0 && step == 14)
+            return 85;
+        return v;
+    case 3: // a fill over the last beat
+        if (step >= 12) {
+            if (role == 1)
+                return 70 + 12 * (step - 12);
+            if (role == 6 && (step % 2) == 1)
+                return 90;
+            if (role == 4 || role == 5)
+                return 0;
+        }
+        return v;
+    default:
+        return v;
+    }
+}
+} // namespace Finger
+
+void FingerEngine::process(tracktion::MidiMessageArray &midi,
+                           double blockStartBeat, double beatsPerSecond,
+                           double blockSeconds, const Settings &settings) {
+    bool allOff = false;
+    auto notes = takeNotes(midi, allOff);
+    if (allOff) {
+        heldMask = 0;
+        for (auto &o : offs)
+            addAt(midi, juce::MidiMessage::noteOff(channel, o.note), 0.0);
+        offs.clear();
+        return;
+    }
+    if (beatsPerSecond <= 0.0 || blockSeconds <= 0.0)
+        return;
+    const double step = 0.25;
+    const double blockEnd = blockStartBeat + blockSeconds * beatsPerSecond;
+    auto toTime = [&](double beat) {
+        return (beat - blockStartBeat) / beatsPerSecond;
+    };
+    if (blockStartBeat < lastStepBeat - 1.0) // the song jumped back
+        lastStepBeat = -1.0e9;
+
+    // the keys: pattern keys are taken, the rest pass through
+    for (auto &m : notes) {
+        int slot = m.getNoteNumber() - settings.baseKey;
+        if (!juce::isPositiveAndBelow(slot, Finger::numSlots)) {
+            addAt(midi, m, m.getTimeStamp());
+            continue;
+        }
+        channel = m.getChannel();
+        if (m.isNoteOn()) {
+            heldMask |= 1u << slot;
+            lastSlot = slot;
+        } else
+            heldMask &= ~(1u << slot);
+    }
+
+    // note offs due in this block
+    for (size_t i = offs.size(); i-- > 0;)
+        if (offs[i].beat < blockEnd) {
+            addAt(midi, juce::MidiMessage::noteOff(channel, offs[i].note),
+                  toTime(offs[i].beat));
+            offs.erase(offs.begin() + long(i));
+        }
+
+    // the 16th steps starting in this block
+    double first = std::ceil(blockStartBeat / step - 1.0e-9) * step;
+    for (double b = first; b < blockEnd - 1.0e-9; b += step) {
+        if (b <= lastStepBeat + 1.0e-9)
+            continue;
+        lastStepBeat = b;
+        if (heldMask == 0)
+            continue;
+        long globalStep = std::lround(b / step);
+        std::array<int, Finger::numRoles> velocity{};
+        for (int slot = 0; slot < Finger::numSlots; slot++) {
+            if ((heldMask & (1u << slot)) == 0)
+                continue;
+            auto &s = settings.slots[size_t(slot)];
+            int length = Finger::lengthSteps(s.length);
+            int at = int(globalStep % length);
+            int variation = s.variation;
+            if (length == 32 && at >= 16) // the second bar ends in a fill
+                variation = 3;
+            for (int r = 0; r < Finger::numRoles; r++)
+                velocity[size_t(r)] = juce::jmax(
+                    velocity[size_t(r)], Finger::hit(s.pattern, variation, r, at));
+        }
+        for (int r = 0; r < Finger::numRoles; r++) {
+            if (velocity[size_t(r)] <= 0)
+                continue;
+            int note = settings.notes[size_t(r)];
+            addAt(midi,
+                  juce::MidiMessage::noteOn(channel, note,
+                                            juce::uint8(velocity[size_t(r)])),
+                  toTime(b));
+            if (b + 0.1 < blockEnd)
+                addAt(midi, juce::MidiMessage::noteOff(channel, note),
+                      toTime(b + 0.1));
+            else
+                offs.push_back({note, b + 0.1});
+        }
+    }
+    midi.sortByTimestamp();
+}
+
 } // namespace midifx
 
 //==============================================================================
@@ -527,6 +719,121 @@ void MidiEchoPlugin::applyToBuffer(const tracktion::PluginRenderContext &fc) {
     s.transpose = juce::roundToInt(transpose->getCurrentValue());
     engine.process(*fc.bufferForMidiMessages, tempoPosition.getTempo() / 60.0,
                    fc.bufferNumSamples / sampleRate, s);
+}
+
+
+//==============================================================================
+const char *FingerPlugin::xmlTypeName = "lmn3Finger";
+
+FingerPlugin::FingerPlugin(tracktion::PluginCreationInfo info)
+    : MidiFxPlugin(info), tempoPosition(createPosition(edit.tempoSequence)) {
+    baseKey = addNumberParam(
+        "baseKey", TRANS("Key"), {36.0f, 84.0f}, 1.0f, baseKeyValue, 54.0f,
+        [](float v) {
+            return juce::MidiMessage::getMidiNoteName(juce::roundToInt(v), true,
+                                                      true, 4);
+        });
+    juce::StringArray variations{"1 of 4", "2 of 4", "3 of 4", "4 of 4"};
+    for (int slot = 0; slot < midifx::Finger::numSlots; slot++) {
+        auto n = juce::String(slot + 1);
+        slotParams[slot][0] = addChoiceParam(
+            "slot" + n + "pattern", "Pattern " + n,
+            midifx::Finger::getPatternNames(), slotValues[slot][0], float(slot));
+        slotParams[slot][1] = addChoiceParam("slot" + n + "variation",
+                                             "Variation " + n, variations,
+                                             slotValues[slot][1], 0.0f);
+        slotParams[slot][2] = addChoiceParam(
+            "slot" + n + "length", "Length " + n,
+            midifx::Finger::getLengthNames(), slotValues[slot][2], 1.0f);
+    }
+}
+
+FingerPlugin::~FingerPlugin() {
+    notifyListenersOfDeletion();
+    for (auto p : getAutomatableParameters())
+        p->detachFromCurrentValue();
+}
+
+tracktion::AutomatableParameter *FingerPlugin::getSlotParameter(int slot,
+                                                                int which) const {
+    return slotParams[juce::jlimit(0, midifx::Finger::numSlots - 1, slot)]
+                     [juce::jlimit(0, 2, which)];
+}
+
+void FingerPlugin::initialise(const tracktion::PluginInitialisationInfo &) {
+    freeRunningBeat = 0.0;
+    updateKitNotes();
+}
+
+void FingerPlugin::updateKitNotes() {
+    std::array<int, midifx::Finger::numRoles> notes{53, 54, 55, 56,
+                                                    57, 58, 59, 60};
+    if (auto track = dynamic_cast<tracktion::AudioTrack *>(getOwnerTrack())) {
+        // a sample kit: find each role by its sound's name
+        static const char *const words[midifx::Finger::numRoles][4] = {
+            {"kick", "bd", nullptr, nullptr},
+            {"snare", "sd", nullptr, nullptr},
+            {"clap", "snare", nullptr, nullptr},
+            {"rim", "clave", "snare", nullptr},
+            {"hat", "hh", nullptr, nullptr},
+            {"open", "hat", nullptr, nullptr},
+            {"tom", nullptr, nullptr, nullptr},
+            {"cowbell", "perc", "shaker", "clave"}};
+        for (auto sampler :
+             track->pluginList.getPluginsOfType<tracktion::SamplerPlugin>()) {
+            for (int role = 0; role < midifx::Finger::numRoles; role++) {
+                bool found = false;
+                for (auto word : words[role]) {
+                    if (word == nullptr || found)
+                        break;
+                    for (int i = 0; i < sampler->getNumSounds() && !found; i++) {
+                        auto name = sampler->getSoundName(i).toLowerCase();
+                        // a closed hat is a hat that isn't open
+                        if (role == 4 && name.contains("open"))
+                            continue;
+                        if (name.contains(word)) {
+                            notes[size_t(role)] = sampler->getKeyNote(i);
+                            found = true;
+                        }
+                    }
+                }
+            }
+            break;
+        }
+    }
+    const juce::SpinLock::ScopedLockType l(kitLock);
+    kitNotes = notes;
+}
+
+midifx::FingerEngine::Settings FingerPlugin::getSettings() const {
+    midifx::FingerEngine::Settings s;
+    s.baseKey = juce::roundToInt(baseKey->getCurrentValue());
+    for (int slot = 0; slot < midifx::Finger::numSlots; slot++) {
+        auto &sl = s.slots[size_t(slot)];
+        sl.pattern = choice(slotParams[slot][0]);
+        sl.variation = choice(slotParams[slot][1]);
+        sl.length = choice(slotParams[slot][2]);
+    }
+    return s;
+}
+
+void FingerPlugin::applyToBuffer(const tracktion::PluginRenderContext &fc) {
+    if (fc.bufferForMidiMessages == nullptr)
+        return;
+    double bps = 2.0;
+    double start =
+        moreFxBlockBeat(fc, tempoPosition, freeRunningBeat, sampleRate, bps);
+    auto s = getSettings();
+    {
+        const juce::SpinLock::ScopedTryLockType l(kitLock);
+        if (l.isLocked())
+            s.notes = kitNotes;
+    }
+    engine.process(*fc.bufferForMidiMessages, start, bps,
+                   fc.bufferNumSamples / sampleRate, s);
+    heldMask = engine.getHeldMask();
+    if (engine.getLastSlot() != lastReported) // the knobs follow the last key
+        selectedSlot = lastReported = engine.getLastSlot();
 }
 
 } // namespace internal_plugins
