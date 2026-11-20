@@ -82,6 +82,44 @@ std::unique_ptr<PlayfulScene> engineShape(Getter attack, Getter decay,
                                           Getter sustain, Getter release,
                                           Getter cutoff, IntGetter voices);
 
+// Newer MIDI FX (PlayfulScenesMore.cpp)
+std::unique_ptr<PlayfulScene> noteRepeat(Getter rateBeats, TextGetter rateText,
+                                         Getter ramp, Getter gate,
+                                         Getter swing);
+// offset(i, n, gap, curve): when note i of n is played
+std::unique_ptr<PlayfulScene>
+strum(Getter seconds, IntGetter direction, std::function<bool()> alternate,
+      IntGetter curve, std::function<double(int, int, double, int)> offset);
+std::unique_ptr<PlayfulScene> humanise(Getter timingSeconds, Getter velocity,
+                                       Getter length, Getter amount);
+std::unique_ptr<PlayfulScene> midiEcho(TextGetter timeText, Getter timeBeats,
+                                       IntGetter repeats, Getter decay,
+                                       IntGetter transpose);
+
+// Newer effects (PlayfulScenesMore.cpp)
+std::unique_ptr<PlayfulScene> tape(Getter wow, Getter flutter, Getter saturate,
+                                   Getter hiss, Getter wobble);
+std::unique_ptr<PlayfulScene> lofi(Getter bits, Getter rateHz, Getter noise,
+                                   Getter mix);
+// shape(x, type): the clipping curve
+std::unique_ptr<PlayfulScene> drive(Getter driveDb, Getter tone, IntGetter type,
+                                    TextGetter typeName, Getter mix,
+                                    std::function<float(float, int)> shape);
+std::unique_ptr<PlayfulScene>
+resonantFilter(Getter liveCutoff, Getter resonance, Getter envelope, Getter lfo,
+               IntGetter type, juce::StringArray typeNames,
+               TextGetter lfoRateText);
+// gainAt(seconds since a hit)
+std::unique_ptr<PlayfulScene> ducker(TextGetter sourceName,
+                                     std::function<bool()> followsBeat,
+                                     std::function<float(float)> gainAt,
+                                     Getter liveGain);
+// repeats: count, or -1 while held. liveRepeat: index, -1 off, -2 waiting
+std::unique_ptr<PlayfulScene> beatRepeat(TextGetter lengthText,
+                                         IntGetter repeats, Getter decay,
+                                         Getter pitch, IntGetter liveRepeat,
+                                         std::function<void(bool)> setActive);
+
 // any other plugin or modifier
 std::unique_ptr<PlayfulScene> generic(TextGetter subtitle);
 

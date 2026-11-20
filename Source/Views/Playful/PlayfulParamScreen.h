@@ -17,6 +17,8 @@ class PlayfulScene {
     virtual void pageChanged(int /*page*/) {}
     // a title for the current page (empty: the screen's own title)
     virtual juce::String getTitle() { return {}; }
+    // an encoder (0-3) was pushed down or let go
+    virtual void encoderButton(int /*encoder*/, bool /*down*/) {}
 };
 
 // One encoder-controlled value on a playful screen
@@ -96,6 +98,14 @@ class PlayfulParamScreen : public PlayfulScreen,
     void encoder3Decreased() override { nudge(2, -1); }
     void encoder4Increased() override { nudge(3, 1); }
     void encoder4Decreased() override { nudge(3, -1); }
+    void encoder1ButtonPressed() override { encoderButton(0, true); }
+    void encoder1ButtonReleased() override { encoderButton(0, false); }
+    void encoder2ButtonPressed() override { encoderButton(1, true); }
+    void encoder2ButtonReleased() override { encoderButton(1, false); }
+    void encoder3ButtonPressed() override { encoderButton(2, true); }
+    void encoder3ButtonReleased() override { encoderButton(2, false); }
+    void encoder4ButtonPressed() override { encoderButton(3, true); }
+    void encoder4ButtonReleased() override { encoderButton(3, false); }
 
     void controlButtonPressed() override { repaint(); }
     void controlButtonReleased() override { repaint(); }
@@ -126,6 +136,11 @@ class PlayfulParamScreen : public PlayfulScreen,
     int indexFor(int encoder) const;
     bool hasEnabled(int from, int to) const;
     void nudge(int encoder, int direction);
+    void encoderButton(int encoder, bool down) {
+        if (scene != nullptr)
+            scene->encoderButton(encoder, down);
+        repaint();
+    }
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PlayfulParamScreen)
 };

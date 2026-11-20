@@ -87,6 +87,12 @@ void PluginTreeGroup::populateBuiltInEffects(int &num) {
     addInternalPlugin<tracktion::PitchShiftPlugin>(*this, num, false,
                                                    "Pitch Shift");
     addInternalPlugin<tracktion::LowPassPlugin>(*this, num, false, "LPF/HPF");
+    addInternalPlugin<internal_plugins::ResonantFilterPlugin>(*this, num);
+    addInternalPlugin<internal_plugins::DrivePlugin>(*this, num);
+    addInternalPlugin<internal_plugins::TapePlugin>(*this, num);
+    addInternalPlugin<internal_plugins::LofiPlugin>(*this, num);
+    addInternalPlugin<internal_plugins::DuckerPlugin>(*this, num);
+    addInternalPlugin<internal_plugins::BeatRepeatPlugin>(*this, num);
     //        addInternalPlugin<tracktion::MidiModifierPlugin>(*this,
     //        num);
     //        addInternalPlugin<tracktion::MidiPatchBayPlugin>(*this,
@@ -102,6 +108,10 @@ void PluginTreeGroup::populateBuiltInMidiFx(int &num) {
     addInternalPlugin<internal_plugins::ArpeggiatorPlugin>(*this, num);
     addInternalPlugin<internal_plugins::ScaleLockPlugin>(*this, num);
     addInternalPlugin<internal_plugins::ChordPlugin>(*this, num);
+    addInternalPlugin<internal_plugins::NoteRepeatPlugin>(*this, num);
+    addInternalPlugin<internal_plugins::StrumPlugin>(*this, num);
+    addInternalPlugin<internal_plugins::HumanisePlugin>(*this, num);
+    addInternalPlugin<internal_plugins::MidiEchoPlugin>(*this, num);
 }
 
 void PluginTreeGroup::scanForPlugins() const {

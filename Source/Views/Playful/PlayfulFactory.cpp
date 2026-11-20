@@ -122,6 +122,17 @@ midiFxViewModel(internal_plugins::MidiFxPlugin *midiFx) {
     return std::make_shared<VM>(midiFx, specs);
 }
 
+// The built-in audio effects: their knob list
+std::shared_ptr<app_view_models::ParameterListPluginViewModel>
+fxViewModel(internal_plugins::AudioFxPlugin *fx) {
+    using VM = app_view_models::ParameterListPluginViewModel;
+    juce::Array<VM::ParameterSpec> specs;
+    for (auto &control : fx->getControls())
+        specs.add(VM::spec(control.parameter->getParameterName(),
+                           control.parameter, control.interval));
+    return std::make_shared<VM>(fx, specs);
+}
+
 // Param from increment/decrement functions
 Param stepper(const String &label, std::function<float()> normalised,
               std::function<String()> text, std::function<void()> up,
@@ -621,6 +632,193 @@ createPlayfulPluginView(tracktion::Plugin *plugin,
                     return midifx::Chords::getSpreadNames()[choiceOf(
                         chord->spread)];
                 }),
+            vm);
+    }
+
+    if (auto tape = dynamic_cast<TapePlugin *>(plugin)) {
+        auto vm = fxViewModel(tape);
+        auto get = [tape](const char *id) {
+            return [tape, id] { return tape->get(id); };
+        };
+        return screen(mcm, "Tape", paramsFrom(vm.get()),
+                      S::tape(get("wow"), get("flutter"), get("saturate"),
+                              get("hiss"), [tape] { return tape->getWobble(); }),
+                      vm);
+    }
+
+    if (auto lofi = dynamic_cast<LofiPlugin *>(plugin)) {
+        auto vm = fxViewModel(lofi);
+        return screen(
+            mcm, "Lo-fi", paramsFrom(vm.get()),
+            S::lofi([lofi] { return lofi->get("bits"); },
+                    [lofi] { return LofiPlugin::rateHz(lofi->get("rate")); },
+                    [lofi] { return lofi->get("noise"); },
+                    [lofi] { return lofi->get("mix"); }),
+            vm);
+    }
+
+    if (auto drive = dynamic_cast<DrivePlugin *>(plugin)) {
+        auto vm = fxViewModel(drive);
+        return screen(
+            mcm, "Drive", paramsFrom(vm.get()),
+            S::drive([drive] { return drive->get("drive"); },
+                     [drive] { return drive->get("tone"); },
+                     [drive] { return drive->getChoice("type"); },
+                     [drive] {
+                         return fx::Drive::getTypeNames()[drive->getChoice(
+                             "type")];
+                     },
+                     [drive] { return drive->get("mix"); },
+                     [](float x, int type) { return fx::Drive::shape(x, type); }),
+            vm);
+    }
+
+    if (auto filt = dynamic_cast<ResonantFilterPlugin *>(plugin)) {
+        auto vm = fxViewModel(filt);
+        return screen(
+            mcm, "Filter", paramsFrom(vm.get()),
+            S::resonantFilter(
+                [filt] {
+                    // the live cutoff while sound plays, else the knob's
+                    float moving = filt->liveCutoff.load();
+                    bool modulated = std::abs(filt->get("envelope")) > 0.01f ||
+                                     filt->get("lfo") > 0.01f;
+                    return modulated ? moving
+                                     : ResonantFilterPlugin::cutoffHz(
+                                           filt->get("cutoff"));
+                },
+                [filt] { return filt->get("resonance"); },
+                [filt] { return filt->get("envelope"); },
+                [filt] { return filt->get("lfo"); },
+                [filt] { return filt->getChoice("type"); },
+                fx::ResonantFilter::getTypeNames(),
+                [filt] {
+                    return ResonantFilterPlugin::getLfoRateNames()
+                        [filt->getChoice("lfoRate")];
+                }),
+            vm);
+    }
+
+    if (auto duck = dynamic_cast<DuckerPlugin *>(plugin)) {
+        auto vm = fxViewModel(duck);
+        auto params = paramsFrom(vm.get());
+        // SOURCE: the beat or another track (sidechain)
+        auto sourceText = [duck] {
+            int index = duck->getSourceIndex();
+            if (index == 0)
+                return String("Beat");
+            auto name = duck->getSourceNames()[index];
+            auto number = name.upToFirstOccurrenceOf(".", false, false);
+            auto trackName = name.fromFirstOccurrenceOf(". ", false, false);
+            return trackName.isEmpty() || trackName == number
+                       ? "Track " + number
+                       : trackName;
+        };
+        Param source;
+        source.label = "SOURCE";
+        source.text = sourceText;
+        source.normalised = [duck] {
+            int count = duck->getSourceNames().size();
+            return count > 1 ? duck->getSourceIndex() / float(count - 1) : 0.0f;
+        };
+        source.nudge = [duck](int direction) {
+            int count = duck->getSourceNames().size();
+            duck->setSourceIndex(
+                juce::jlimit(0, count - 1, duck->getSourceIndex() + direction));
+        };
+        params.insert(params.begin(), source);
+        return screen(
+            mcm, "Ducker", std::move(params),
+            S::ducker(sourceText, [duck] { return duck->getSourceIndex() == 0; },
+                      [duck](float seconds) {
+                          fx::Ducker::Settings s;
+                          s.depth = duck->get("depth");
+                          s.releaseSeconds = duck->get("release");
+                          s.shape = duck->getChoice("shape");
+                          return fx::Ducker::gainAt(seconds, s);
+                      },
+                      [duck] { return duck->liveGain.load(); }),
+            vm);
+    }
+
+    if (auto rep = dynamic_cast<BeatRepeatPlugin *>(plugin)) {
+        auto vm = fxViewModel(rep);
+        return screen(
+            mcm, "Beat Repeat", paramsFrom(vm.get()),
+            S::beatRepeat(
+                [rep] {
+                    return fx::BeatRepeat::getLengthNames()[rep->getChoice(
+                        "length")];
+                },
+                [rep] {
+                    return fx::BeatRepeat::getRepeatCount(
+                        rep->getChoice("repeats"));
+                },
+                [rep] { return rep->get("decay"); },
+                [rep] { return rep->get("pitch"); },
+                [rep] { return rep->liveRepeat.load(); },
+                [rep](bool down) { rep->setActive(down); }),
+            vm);
+    }
+
+    if (auto rep = dynamic_cast<NoteRepeatPlugin *>(plugin)) {
+        auto vm = midiFxViewModel(rep);
+        return screen(
+            mcm, "Note Repeat", paramsFrom(vm.get()),
+            S::noteRepeat(
+                [rep] {
+                    return float(
+                        midifx::NoteRepeat::getRateBeats(choiceOf(rep->rate)));
+                },
+                [rep] {
+                    return midifx::NoteRepeat::getRateNames()[choiceOf(
+                        rep->rate)];
+                },
+                [rep] { return rep->ramp->getCurrentValue(); },
+                [rep] { return rep->gate->getCurrentValue(); },
+                [rep] { return rep->swing->getCurrentValue(); }),
+            vm);
+    }
+
+    if (auto st = dynamic_cast<StrumPlugin *>(plugin)) {
+        auto vm = midiFxViewModel(st);
+        return screen(
+            mcm, "Strum", paramsFrom(vm.get()),
+            S::strum([st] { return st->time->getCurrentValue(); },
+                     [st] { return choiceOf(st->direction); },
+                     [st] { return choiceOf(st->alternate) == 1; },
+                     [st] { return choiceOf(st->curve); },
+                     [](int i, int n, double gap, int curve) {
+                         return midifx::Strum::offset(i, n, gap, curve);
+                     }),
+            vm);
+    }
+
+    if (auto hu = dynamic_cast<HumanisePlugin *>(plugin)) {
+        auto vm = midiFxViewModel(hu);
+        return screen(mcm, "Humanise", paramsFrom(vm.get()),
+                      S::humanise([hu] { return hu->timing->getCurrentValue(); },
+                                  [hu] { return hu->velocity->getCurrentValue(); },
+                                  [hu] { return hu->length->getCurrentValue(); },
+                                  [hu] { return hu->amount->getCurrentValue(); }),
+                      vm);
+    }
+
+    if (auto echo = dynamic_cast<MidiEchoPlugin *>(plugin)) {
+        auto vm = midiFxViewModel(echo);
+        return screen(
+            mcm, "MIDI Echo", paramsFrom(vm.get()),
+            S::midiEcho(
+                [echo] {
+                    return midifx::Echo::getTimeNames()[choiceOf(echo->time)];
+                },
+                [echo] {
+                    return float(
+                        midifx::Echo::getTimeBeats(choiceOf(echo->time)));
+                },
+                [echo] { return choiceOf(echo->repeats); },
+                [echo] { return echo->decay->getCurrentValue(); },
+                [echo] { return choiceOf(echo->transpose); }),
             vm);
     }
 

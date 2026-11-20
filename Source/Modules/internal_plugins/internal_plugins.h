@@ -20,6 +20,17 @@ namespace internal_plugins {
     class ArpeggiatorPlugin;
     class ScaleLockPlugin;
     class ChordPlugin;
+    class NoteRepeatPlugin;
+    class StrumPlugin;
+    class HumanisePlugin;
+    class MidiEchoPlugin;
+    class AudioFxPlugin;
+    class TapePlugin;
+    class LofiPlugin;
+    class DrivePlugin;
+    class ResonantFilterPlugin;
+    class DuckerPlugin;
+    class BeatRepeatPlugin;
     class EnginePlugin;
     class StringEnginePlugin;
     class FmEnginePlugin;
@@ -34,14 +45,18 @@ namespace internal_plugins {
 #include <tracktion_engine/tracktion_engine.h>
 #include <functional>
 #include <array>
+#include <atomic>
 #include <vector>
 #include <algorithm>
 
 #include "DrumSamplerPlugin/DrumSamplerPlugin.h"
 #include "MidiFx/MidiFxLogic.h"
 #include "MidiFx/MidiFxPlugins.h"
+#include "MidiFx/MoreMidiFx.h"
 #include "Engines/EngineDsp.h"
 #include "Engines/EnginePlugins.h"
+#include "Effects/FxDsp.h"
+#include "Effects/FxPlugins.h"
 
 
 

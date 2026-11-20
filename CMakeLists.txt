@@ -89,6 +89,7 @@ target_sources(LMN-3  PRIVATE
     Source/Views/Playful/PlayfulStyle.cpp
     Source/Views/Playful/PlayfulParamScreen.cpp
     Source/Views/Playful/PlayfulScenes.cpp
+    Source/Views/Playful/PlayfulScenesMore.cpp
     Source/Views/Playful/PlayfulFactory.cpp
     Source/Views/Playful/PlayfulSamplerView.cpp
     Source/Views/Playful/PlayfulApp.cpp
