@@ -48,6 +48,7 @@ target_sources(Tests PRIVATE
         app_view_models/Utilities/EnginesTest.cpp
         app_view_models/Utilities/SequencersTest.cpp
         app_view_models/Utilities/KnobMapsTest.cpp
+        app_view_models/Utilities/PlaybackTest.cpp
 )
 
 target_compile_definitions(Tests PRIVATE

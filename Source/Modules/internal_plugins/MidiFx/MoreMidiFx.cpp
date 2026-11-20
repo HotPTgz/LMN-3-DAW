@@ -737,9 +737,11 @@ FingerPlugin::FingerPlugin(tracktion::PluginCreationInfo info)
             "slot" + n + "length", "Length " + n,
             midifx::Finger::getLengthNames(), slotValues[slot][2], 1.0f);
     }
+    kitWatcher = std::make_unique<KitWatcher>(*this);
 }
 
 FingerPlugin::~FingerPlugin() {
+    kitWatcher.reset();
     notifyListenersOfDeletion();
     for (auto p : getAutomatableParameters())
         p->detachFromCurrentValue();
@@ -754,6 +756,63 @@ tracktion::AutomatableParameter *FingerPlugin::getSlotParameter(int slot,
 void FingerPlugin::initialise(const tracktion::PluginInitialisationInfo &) {
     freeRunningBeat = 0.0;
     updateKitNotes();
+}
+
+FingerPlugin::KitWatcher::KitWatcher(FingerPlugin &o)
+    : owner(o), pluginState(o.state) {
+    pluginState.addListener(this);
+    watchTrack();
+}
+
+FingerPlugin::KitWatcher::~KitWatcher() {
+    cancelPendingUpdate();
+    pluginState.removeListener(this);
+    trackState.removeListener(this);
+}
+
+void FingerPlugin::KitWatcher::watchTrack() {
+    auto parent = pluginState.getParent();
+    if (parent == trackState)
+        return;
+    trackState.removeListener(this);
+    trackState = parent;
+    trackState.addListener(this);
+    triggerAsyncUpdate();
+}
+
+static bool moreFxIsKitTree(const juce::ValueTree &v) {
+    return v.hasType(tracktion::IDs::SOUND) || v.hasType(tracktion::IDs::PLUGIN);
+}
+
+void FingerPlugin::KitWatcher::valueTreeChildAdded(juce::ValueTree &,
+                                                   juce::ValueTree &child) {
+    if (moreFxIsKitTree(child))
+        triggerAsyncUpdate();
+}
+
+void FingerPlugin::KitWatcher::valueTreeChildRemoved(juce::ValueTree &,
+                                                     juce::ValueTree &child,
+                                                     int) {
+    if (moreFxIsKitTree(child))
+        triggerAsyncUpdate();
+}
+
+void FingerPlugin::KitWatcher::valueTreePropertyChanged(
+    juce::ValueTree &tree, const juce::Identifier &) {
+    if (tree.hasType(tracktion::IDs::SOUND))
+        triggerAsyncUpdate();
+}
+
+void FingerPlugin::KitWatcher::valueTreeParentChanged(juce::ValueTree &tree) {
+    if (tree == pluginState)
+        watchTrack();
+}
+
+void FingerPlugin::KitWatcher::handleAsyncUpdate() { owner.updateKitNotes(); }
+
+std::array<int, midifx::Finger::numRoles> FingerPlugin::getKitNotes() const {
+    const juce::SpinLock::ScopedLockType l(kitLock);
+    return kitNotes;
 }
 
 void FingerPlugin::updateKitNotes() {
@@ -816,10 +875,13 @@ void FingerPlugin::applyToBuffer(const tracktion::PluginRenderContext &fc) {
         moreFxBlockBeat(fc, tempoPosition, freeRunningBeat, sampleRate, bps);
     auto s = getSettings();
     {
+        // never wait on the message thread: if the kit is being updated
+        // right now, use the notes from the last block
         const juce::SpinLock::ScopedTryLockType l(kitLock);
         if (l.isLocked())
-            s.notes = kitNotes;
+            audioKitNotes = kitNotes;
     }
+    s.notes = audioKitNotes;
     engine.process(*fc.bufferForMidiMessages, start, bps,
                    fc.bufferNumSamples / sampleRate, s);
     heldMask = engine.getHeldMask();

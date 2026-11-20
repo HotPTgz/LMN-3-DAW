@@ -16,7 +16,9 @@ Playing
                   slide a finger to play the keys it passes;
                   Oct - / Oct + change the octave
   Encoders        drag left/right (or up/down) on one of the four knob
-                  boxes at the bottom of the screen; tap it to press it
+                  boxes at the bottom of the screen; tap it to press it,
+                  or keep a finger still on it to hold it down (Beat
+                  Repeat's stutter)
   Ctrl            tap to turn it on, tap again to turn it off
   Big screen      hides the keys so the screen fills the height
                   (the same button, now called Keys, brings them back)

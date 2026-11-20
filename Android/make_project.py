@@ -26,16 +26,19 @@ if "--fix-up" in sys.argv:
         text = text.replace(", " + flag, "").replace(flag + ", ", "")
     gradle.write_text(text)
 
-    # Turning the phone sideways also changes the screen's size class and
-    # layout; unless the app says it handles those itself, Android closes the
-    # window and opens a new one, and JUCE treats a closed window as the app
-    # being closed
+    # Whenever the phone's configuration changes (turned sideways, a keyboard,
+    # stylus or touch device connected, dark mode, font size, language...),
+    # Android closes the window and opens a new one unless the app says it
+    # handles that change itself, and JUCE treats a closed window as the app
+    # being closed. So claim them all. (A freshly booted emulator registers
+    # its touch devices a moment after the app opens, which closed it.)
     manifest = HERE / "Builds/Android/app/src/main/AndroidManifest.xml"
     text = manifest.read_text()
     text = text.replace('android:configChanges="keyboardHidden|orientation|screenSize"',
-                        'android:configChanges="keyboard|keyboardHidden|navigation|'
-                        'orientation|screenSize|smallestScreenSize|screenLayout|'
-                        'density|uiMode"')
+                        'android:configChanges="mcc|mnc|locale|touchscreen|'
+                        'keyboard|keyboardHidden|navigation|orientation|'
+                        'screenSize|smallestScreenSize|screenLayout|density|'
+                        'uiMode|fontScale|layoutDirection|colorMode"')
     manifest.write_text(text)
     print("fixed up", gradle, "and", manifest)
     sys.exit(0)
