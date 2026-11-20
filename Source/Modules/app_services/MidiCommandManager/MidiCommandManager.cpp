@@ -421,6 +421,12 @@ void MidiCommandManager::midiMessageReceived(const juce::MidiMessage &message,
             });
             break;
 
+        case VELOCITY_STATE:
+            listeners.call([message](Listener &l) {
+                l.velocityStateChanged(message.getControllerValue() >= 64);
+            });
+            break;
+
         case OCTAVE_CHANGE:
             // This should be called for all listeners, not just the currently
             // focused component controller message values will be between 0 and

@@ -97,12 +97,14 @@ The monitor starts in portrait (400 × 1280). Turn it sideways in Raspberry Pi O
 (use the output name `wlr-randr` lists, and `270` if the picture is upside down).
 
 ### Limoncello controls
-These need the [Limoncello Teensy firmware](https://github.com/HotPTgz/Limoncello/tree/main/firmware) (it sends CC 113–115):
+These need the [Limoncello Teensy firmware](https://github.com/HotPTgz/Limoncello/tree/main/firmware) (it sends CC 113–116):
 
 | Control | What it does |
 | --- | --- |
 | Joystick click | Sustain, like a sustain pedal, while held (4OSC, String, FM, Pulse) |
-| Control + joystick click | Switches the joystick's up/down mod wheel on or off (the firmware remembers it) |
+| Joystick left/right | Pitch bend, ±2 semitones on String, FM and Pulse (4OSC has its own range) |
+| Control + joystick click | Switches the joystick's up/down mod wheel on or off (the firmware remembers it). On String, FM and Pulse the mod wheel is vibrato, up to ±50 cents; many VST3 synths use it too |
+| Control + Tempo | Switches key velocity on or off: off plays every note at the same velocity (100). The firmware remembers it |
 | MIC | Arms the built-in mic on the selected track: the next **Record** records sound from it. MIC again turns it off. The mic is never played through the speakers, so it can't howl. |
 | Control + MIC | Samples: make a sound and press MIC again (it stops by itself after 20 s). The silence around it is trimmed. A drum sampler asks which pad to put it on (play the key), a sampler gets it across the keys, and a track with no instrument gets a new sampler. It is always saved in `samples/Recorded` too. |
 

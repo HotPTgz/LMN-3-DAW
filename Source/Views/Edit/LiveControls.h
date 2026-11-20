@@ -9,6 +9,9 @@
  *  - Joystick click: sustain (like a sustain pedal) while held.
  *  - Control + joystick click: the firmware switches the joystick's up/down
  *    mod wheel on or off and reports it (CC 115); we show a message.
+ *  - Control + Tempo: the firmware switches key velocity on or off (off:
+ *    every note at the same velocity) and reports it (CC 116); we show a
+ *    message.
  *  - MIC: arm the built-in mic on the selected track. The next Record then
  *    records audio from the mic onto that track. MIC again disarms it.
  *    The mic is not played through the speakers (it would howl).
@@ -34,6 +37,7 @@ class LiveControls : public app_services::MidiCommandManager::Listener,
     void joystickButtonPressed() override;
     void joystickButtonReleased() override;
     void modWheelStateChanged(bool isOn) override;
+    void velocityStateChanged(bool isOn) override;
     void noteOnReceived(int noteNumber) override;
 
     SampleState getSampleState() const { return sampleState; }
