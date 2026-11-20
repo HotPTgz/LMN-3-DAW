@@ -7,11 +7,12 @@
 // and two octaves of keys along the bottom.
 //
 //  - drag on one of the four knob boxes at the bottom of the screen to turn
-//    that encoder; tap it to press it
+//    that encoder; tap it to press it, or keep a finger on it to hold it
+//    down (Beat Repeat's hold, for instance)
 //  - Ctrl stays on until it is tapped again
 //  - "Big screen" hides the keys so the screen can use the whole height
 //  - several fingers work at once (chords, holding + while playing a key...)
-class TouchShell : public juce::Component {
+class TouchShell : public juce::Component, private juce::Timer {
   public:
     TouchShell(std::unique_ptr<juce::Component> screen,
                VirtualHardware &hardware);
@@ -33,6 +34,7 @@ class TouchShell : public juce::Component {
     void screenDown(const juce::MouseEvent &e);
     void screenDrag(const juce::MouseEvent &e);
     void screenUp(const juce::MouseEvent &e);
+    void timerCallback() override;
     int encoderAt(juce::Point<float> screenPosition) const;
     void setBigScreen(bool big);
     void layoutPads();
@@ -49,6 +51,8 @@ class TouchShell : public juce::Component {
         juce::Point<float> start;
         float accumulated = 0.0f;
         bool moved = false;
+        bool held = false; // the encoder is being held down
+        juce::uint32 downTime = 0;
     };
     std::map<int, Drag> drags; // by touch index
 

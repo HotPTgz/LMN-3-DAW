@@ -8,6 +8,9 @@ namespace {
 // encoder step
 constexpr float dragStep = 9.0f;
 constexpr float tapSlop = 6.0f;
+// How long a finger rests on a knob box before it counts as holding the
+// encoder down
+constexpr juce::uint32 holdDelayMs = 300;
 
 juce::Colour buttonColour() { return Playful::Colours::panel; }
 } // namespace
@@ -306,8 +309,9 @@ TouchShell::TouchShell(std::unique_ptr<juce::Component> s, VirtualHardware &hw)
 TouchShell::~TouchShell() {
     hardware.onStateChanged = nullptr;
     screen->removeMouseListener(screenListener.get());
+    stopTimer();
     for (auto &d : drags)
-        if (d.second.encoder >= 0 && !d.second.moved)
+        if (d.second.held)
             hardware.pressEncoder(d.second.encoder, false);
 }
 
@@ -438,8 +442,32 @@ void TouchShell::screenDown(const juce::MouseEvent &e) {
     Drag d;
     d.encoder = encoderAt(p);
     d.start = p;
-    if (d.encoder >= 0)
+    d.downTime = juce::Time::getMillisecondCounter();
+    if (d.encoder >= 0) {
         drags[e.source.getIndex()] = d;
+        startTimer(40);
+    }
+}
+
+// A finger that stays still on a knob box holds the encoder down until it
+// lifts, like keeping a real encoder pressed. A quick tap is a press and
+// release, and a finger that moves turns it.
+void TouchShell::timerCallback() {
+    const auto now = juce::Time::getMillisecondCounter();
+    bool waiting = false;
+    for (auto &entry : drags) {
+        auto &d = entry.second;
+        if (d.moved || d.held)
+            continue;
+        if (now - d.downTime >= holdDelayMs) {
+            d.held = true;
+            hardware.pressEncoder(d.encoder, true);
+        } else {
+            waiting = true;
+        }
+    }
+    if (!waiting)
+        stopTimer();
 }
 
 void TouchShell::screenDrag(const juce::MouseEvent &e) {
@@ -447,6 +475,8 @@ void TouchShell::screenDrag(const juce::MouseEvent &e) {
     if (it == drags.end())
         return;
     auto &d = it->second;
+    if (d.held)
+        return; // held down: moving the finger doesn't turn it
     auto p = e.getEventRelativeTo(screen.get()).position;
     float scale = Playful::designWidth / juce::jmax(1, screen->getWidth());
     // right or up turns clockwise
@@ -468,7 +498,9 @@ void TouchShell::screenUp(const juce::MouseEvent &e) {
     auto it = drags.find(e.source.getIndex());
     if (it == drags.end())
         return;
-    if (!it->second.moved) {
+    if (it->second.held) {
+        hardware.pressEncoder(it->second.encoder, false);
+    } else if (!it->second.moved) {
         hardware.pressEncoder(it->second.encoder, true);
         hardware.pressEncoder(it->second.encoder, false);
     }

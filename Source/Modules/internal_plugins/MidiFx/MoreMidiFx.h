@@ -278,6 +278,9 @@ class FingerPlugin : public MidiFxPlugin {
 
     // looks at the track's drum kit to find each role's note
     void updateKitNotes();
+    // the kit note for each role (kick, snare, clap, rim, hat, open hat, tom,
+    // cowbell)
+    std::array<int, midifx::Finger::numRoles> getKitNotes() const;
     midifx::FingerEngine::Settings getSettings() const;
     tracktion::AutomatableParameter *getSlotParameter(int slot, int which) const;
 
@@ -287,15 +290,35 @@ class FingerPlugin : public MidiFxPlugin {
     std::atomic<juce::uint32> heldMask{0};
 
   private:
+    // Notices when the track's kit changes (a new kit, renamed or moved
+    // sounds, a drum instrument added) and looks at it again
+    struct KitWatcher : juce::ValueTree::Listener, juce::AsyncUpdater {
+        explicit KitWatcher(FingerPlugin &o);
+        ~KitWatcher() override;
+        void watchTrack();
+        void valueTreeChildAdded(juce::ValueTree &, juce::ValueTree &) override;
+        void valueTreeChildRemoved(juce::ValueTree &, juce::ValueTree &,
+                                   int) override;
+        void valueTreePropertyChanged(juce::ValueTree &,
+                                      const juce::Identifier &) override;
+        void valueTreeParentChanged(juce::ValueTree &) override;
+        void handleAsyncUpdate() override;
+        FingerPlugin &owner;
+        juce::ValueTree pluginState, trackState;
+    };
+
     juce::CachedValue<float> slotValues[midifx::Finger::numSlots][3];
     tracktion::AutomatableParameter *slotParams[midifx::Finger::numSlots][3]{};
     std::array<int, midifx::Finger::numRoles> kitNotes{53, 54, 55, 56,
                                                        57, 58, 59, 60};
-    juce::SpinLock kitLock;
+    mutable juce::SpinLock kitLock;
+    std::array<int, midifx::Finger::numRoles> audioKitNotes{53, 54, 55, 56,
+                                                            57, 58, 59, 60};
     midifx::FingerEngine engine;
     int lastReported = 0;
     tracktion::tempo::Sequence::Position tempoPosition;
     double freeRunningBeat = 0.0;
+    std::unique_ptr<KitWatcher> kitWatcher;
 };
 
 } // namespace internal_plugins
