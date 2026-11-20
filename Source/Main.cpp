@@ -89,6 +89,14 @@ class GuiAppApplication : public juce::JUCEApplication {
         engine.getPluginManager()
             .createBuiltInType<internal_plugins::ChordPlugin>();
         engine.getPluginManager()
+            .createBuiltInType<internal_plugins::NoteRepeatPlugin>();
+        engine.getPluginManager()
+            .createBuiltInType<internal_plugins::StrumPlugin>();
+        engine.getPluginManager()
+            .createBuiltInType<internal_plugins::HumanisePlugin>();
+        engine.getPluginManager()
+            .createBuiltInType<internal_plugins::MidiEchoPlugin>();
+        engine.getPluginManager()
             .createBuiltInType<internal_plugins::StringEnginePlugin>();
         engine.getPluginManager()
             .createBuiltInType<internal_plugins::FmEnginePlugin>();

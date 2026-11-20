@@ -82,6 +82,20 @@ std::unique_ptr<PlayfulScene> engineShape(Getter attack, Getter decay,
                                           Getter sustain, Getter release,
                                           Getter cutoff, IntGetter voices);
 
+// Newer MIDI FX (PlayfulScenesMore.cpp)
+std::unique_ptr<PlayfulScene> noteRepeat(Getter rateBeats, TextGetter rateText,
+                                         Getter ramp, Getter gate,
+                                         Getter swing);
+// offset(i, n, gap, curve): when note i of n is played
+std::unique_ptr<PlayfulScene>
+strum(Getter seconds, IntGetter direction, std::function<bool()> alternate,
+      IntGetter curve, std::function<double(int, int, double, int)> offset);
+std::unique_ptr<PlayfulScene> humanise(Getter timingSeconds, Getter velocity,
+                                       Getter length, Getter amount);
+std::unique_ptr<PlayfulScene> midiEcho(TextGetter timeText, Getter timeBeats,
+                                       IntGetter repeats, Getter decay,
+                                       IntGetter transpose);
+
 // any other plugin or modifier
 std::unique_ptr<PlayfulScene> generic(TextGetter subtitle);
 

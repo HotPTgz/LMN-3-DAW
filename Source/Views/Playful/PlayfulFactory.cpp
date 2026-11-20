@@ -624,6 +624,67 @@ createPlayfulPluginView(tracktion::Plugin *plugin,
             vm);
     }
 
+    if (auto rep = dynamic_cast<NoteRepeatPlugin *>(plugin)) {
+        auto vm = midiFxViewModel(rep);
+        return screen(
+            mcm, "Note Repeat", paramsFrom(vm.get()),
+            S::noteRepeat(
+                [rep] {
+                    return float(
+                        midifx::NoteRepeat::getRateBeats(choiceOf(rep->rate)));
+                },
+                [rep] {
+                    return midifx::NoteRepeat::getRateNames()[choiceOf(
+                        rep->rate)];
+                },
+                [rep] { return rep->ramp->getCurrentValue(); },
+                [rep] { return rep->gate->getCurrentValue(); },
+                [rep] { return rep->swing->getCurrentValue(); }),
+            vm);
+    }
+
+    if (auto st = dynamic_cast<StrumPlugin *>(plugin)) {
+        auto vm = midiFxViewModel(st);
+        return screen(
+            mcm, "Strum", paramsFrom(vm.get()),
+            S::strum([st] { return st->time->getCurrentValue(); },
+                     [st] { return choiceOf(st->direction); },
+                     [st] { return choiceOf(st->alternate) == 1; },
+                     [st] { return choiceOf(st->curve); },
+                     [](int i, int n, double gap, int curve) {
+                         return midifx::Strum::offset(i, n, gap, curve);
+                     }),
+            vm);
+    }
+
+    if (auto hu = dynamic_cast<HumanisePlugin *>(plugin)) {
+        auto vm = midiFxViewModel(hu);
+        return screen(mcm, "Humanise", paramsFrom(vm.get()),
+                      S::humanise([hu] { return hu->timing->getCurrentValue(); },
+                                  [hu] { return hu->velocity->getCurrentValue(); },
+                                  [hu] { return hu->length->getCurrentValue(); },
+                                  [hu] { return hu->amount->getCurrentValue(); }),
+                      vm);
+    }
+
+    if (auto echo = dynamic_cast<MidiEchoPlugin *>(plugin)) {
+        auto vm = midiFxViewModel(echo);
+        return screen(
+            mcm, "MIDI Echo", paramsFrom(vm.get()),
+            S::midiEcho(
+                [echo] {
+                    return midifx::Echo::getTimeNames()[choiceOf(echo->time)];
+                },
+                [echo] {
+                    return float(
+                        midifx::Echo::getTimeBeats(choiceOf(echo->time)));
+                },
+                [echo] { return choiceOf(echo->repeats); },
+                [echo] { return echo->decay->getCurrentValue(); },
+                [echo] { return choiceOf(echo->transpose); }),
+            vm);
+    }
+
     return nullptr;
 }
 

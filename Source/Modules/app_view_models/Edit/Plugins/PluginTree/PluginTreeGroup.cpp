@@ -102,6 +102,10 @@ void PluginTreeGroup::populateBuiltInMidiFx(int &num) {
     addInternalPlugin<internal_plugins::ArpeggiatorPlugin>(*this, num);
     addInternalPlugin<internal_plugins::ScaleLockPlugin>(*this, num);
     addInternalPlugin<internal_plugins::ChordPlugin>(*this, num);
+    addInternalPlugin<internal_plugins::NoteRepeatPlugin>(*this, num);
+    addInternalPlugin<internal_plugins::StrumPlugin>(*this, num);
+    addInternalPlugin<internal_plugins::HumanisePlugin>(*this, num);
+    addInternalPlugin<internal_plugins::MidiEchoPlugin>(*this, num);
 }
 
 void PluginTreeGroup::scanForPlugins() const {

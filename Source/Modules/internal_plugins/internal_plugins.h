@@ -20,6 +20,10 @@ namespace internal_plugins {
     class ArpeggiatorPlugin;
     class ScaleLockPlugin;
     class ChordPlugin;
+    class NoteRepeatPlugin;
+    class StrumPlugin;
+    class HumanisePlugin;
+    class MidiEchoPlugin;
     class EnginePlugin;
     class StringEnginePlugin;
     class FmEnginePlugin;
@@ -40,6 +44,7 @@ namespace internal_plugins {
 #include "DrumSamplerPlugin/DrumSamplerPlugin.h"
 #include "MidiFx/MidiFxLogic.h"
 #include "MidiFx/MidiFxPlugins.h"
+#include "MidiFx/MoreMidiFx.h"
 #include "Engines/EngineDsp.h"
 #include "Engines/EnginePlugins.h"
 
