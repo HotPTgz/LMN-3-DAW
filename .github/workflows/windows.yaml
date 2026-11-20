@@ -1,7 +1,9 @@
 name: Windows build
 
 # Builds LMN-3.exe, the desktop version you play with the computer keyboard
-# and mouse. Download it from the run's "Artifacts" section.
+# and mouse. Download it from the run's "Artifacts" section, or (for lmn3 and
+# lmn3-v3-wide) from the branch's "latest" release, which the publish job
+# keeps up to date.
 on:
   push:
   workflow_dispatch:
@@ -39,3 +41,25 @@ jobs:
           name: LMN-3-windows
           path: package/
           retention-days: 30
+
+  # lmn3 and lmn3-v3-wide: put the zip on the branch's "latest" release
+  publish:
+    needs: build
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/lmn3' || github.ref == 'refs/heads/lmn3-v3-wide')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: LMN-3-windows
+          path: windows
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          (cd windows && zip -r ../LMN-3-windows.zip .)
+          bash .github/publish_latest.sh LMN-3-windows.zip

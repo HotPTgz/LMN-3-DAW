@@ -2,7 +2,8 @@ name: Android build
 
 # Builds LMN-3.apk, the phone version with on-screen controls. Download
 # "LMN-3-android" from the run's "Artifacts" section, unzip it and open the
-# .apk on the phone. A second build (for a PC's processor) is started on an
+# .apk on the phone, or (for lmn3 and lmn3-v3-wide) get it from the branch's
+# "latest" release, which the publish job keeps up to date. A second build (for a PC's processor) is started on an
 # Android emulator to check that the app opens; its log is kept as
 # "emulator-test".
 on:
@@ -111,6 +112,36 @@ jobs:
           name: ${{ matrix.artifact }}
           path: package/
           retention-days: 30
+
+  # lmn3 and lmn3-v3-wide: put the apps on the branch's "latest" release.
+  # (It doesn't wait for the emulator test, whose first launch sometimes
+  # gets closed by the emulator itself.)
+  publish:
+    needs: build
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/lmn3' || github.ref == 'refs/heads/lmn3-v3-wide')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: LMN-3-android
+          path: phone
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: LMN-3-android-emulator
+          path: emulator
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp phone/LMN-3.apk LMN-3-android.apk
+          cp emulator/LMN-3.apk LMN-3-android-emulator.apk
+          bash .github/publish_latest.sh LMN-3-android.apk LMN-3-android-emulator.apk
 
   emulator-test:
     needs: build
