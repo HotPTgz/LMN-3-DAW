@@ -120,6 +120,29 @@ std::unique_ptr<PlayfulScene> beatRepeat(TextGetter lengthText,
                                          Getter pitch, IntGetter liveRepeat,
                                          std::function<void(bool)> setActive);
 
+// Newer instruments (PlayfulScenesMore.cpp)
+// frame(table, index): a frame's samples; warpPhase(phase, warp)
+std::unique_ptr<PlayfulScene>
+wavetable(IntGetter table, Getter position, Getter warp, Getter filterHz,
+          juce::StringArray names,
+          std::function<const std::vector<float> &(int, int)> frame,
+          std::function<float(double, float)> warpPhase);
+std::unique_ptr<PlayfulScene> mallets(IntGetter material, Getter hardness,
+                                      Getter decay, Getter tone,
+                                      juce::StringArray names);
+// overview: peak levels across the sample; playhead 0-1 (or -1)
+std::unique_ptr<PlayfulScene>
+granular(TextGetter sampleName, std::function<std::vector<float>()> overview,
+         Getter durationSeconds, Getter position, Getter size, Getter density,
+         Getter spray, Getter playhead, std::function<bool()> freeze);
+// preview(pad): the start of the pad's sound; describe(pad): e.g. "48 Hz"
+std::unique_ptr<PlayfulScene>
+drumSynth(IntGetter selectedPad, std::function<void(int)> selectPad,
+          std::function<double(int)> lastHitMs, juce::StringArray padNames,
+          std::function<std::array<float, 6>(int)> padParams,
+          std::function<std::vector<float>(int)> preview,
+          std::function<String(int)> describe);
+
 // any other plugin or modifier
 std::unique_ptr<PlayfulScene> generic(TextGetter subtitle);
 

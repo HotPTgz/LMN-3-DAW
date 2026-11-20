@@ -71,6 +71,10 @@ void PluginTreeGroup::populateBuiltInInstruments(int &num) {
     addInternalPlugin<internal_plugins::StringEnginePlugin>(*this, num, true);
     addInternalPlugin<internal_plugins::FmEnginePlugin>(*this, num, true);
     addInternalPlugin<internal_plugins::PulseEnginePlugin>(*this, num, true);
+    addInternalPlugin<internal_plugins::WavetableEnginePlugin>(*this, num, true);
+    addInternalPlugin<internal_plugins::MalletsEnginePlugin>(*this, num, true);
+    addInternalPlugin<internal_plugins::GranularEnginePlugin>(*this, num, true);
+    addInternalPlugin<internal_plugins::DrumSynthPlugin>(*this, num, true);
 }
 
 void PluginTreeGroup::populateBuiltInEffects(int &num) {

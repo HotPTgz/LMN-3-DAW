@@ -767,4 +767,379 @@ std::unique_ptr<PlayfulScene> beatRepeat(TextGetter lengthText,
                                              liveRepeat, setActive);
 }
 
+//==============================================================================
+// Instruments
+
+// Wavetable: the stack of frames, the one playing highlighted
+class WavetableScene : public PlayfulScene {
+  public:
+    WavetableScene(IntGetter tb, Getter pos, Getter wp, Getter hz,
+                   juce::StringArray n,
+                   std::function<const std::vector<float> &(int, int)> fr,
+                   std::function<float(double, float)> wph)
+        : table(tb), position(pos), warp(wp), filterHz(hz), names(n),
+          frame(fr), warpPhase(wph) {}
+    String getSubtitle() override { return names[table()]; }
+    void paint(Graphics &g, double t) override {
+        int tb = table();
+        float pos = position(), wp = warp();
+        const int frames = 9, points = 200;
+        float fp = pos * (frames - 1);
+        int playing = juce::roundToInt(fp);
+        auto valueAt = [&](int f, float phase) {
+            auto &data = frame(tb, f);
+            int i = juce::jlimit(0, int(data.size()) - 1,
+                                 int(phase * float(data.size())));
+            return data[size_t(i)];
+        };
+        // back to front: frame 8 is drawn first, furthest up and right
+        for (int k = frames - 1; k >= 0; k--) {
+            float off = k * 14.0f;
+            Path p;
+            for (int i = 0; i < points; i++) {
+                float v = valueAt(k, i / float(points));
+                float x = 140 + off + i * 1.7f, y = 190 - off * 0.9f - 50 * v;
+                if (i == 0)
+                    p.startNewSubPath(x, y);
+                else
+                    p.lineTo(x, y);
+            }
+            g.setColour(Colours::greyKey.withAlpha(k == playing ? 0.0f : 0.55f));
+            strokePath(g, p, 2);
+        }
+        // the wave you hear: blended between frames, bent by the warp
+        {
+            int f0 = juce::jmin(int(fp), frames - 2);
+            float mix = fp - float(f0);
+            float off = fp * 14.0f;
+            float wobble = 0.02f * std::sin(float(t) * 2.0f);
+            Path p;
+            for (int i = 0; i < points; i++) {
+                float ph = warpPhase(i / double(points), wp);
+                float v = valueAt(f0, ph) * (1 - mix) + valueAt(f0 + 1, ph) * mix;
+                float x = 140 + off + i * 1.7f,
+                      y = 190 - off * 0.9f - 50 * v * (1 + wobble);
+                if (i == 0)
+                    p.startNewSubPath(x, y);
+                else
+                    p.lineTo(x, y);
+            }
+            g.setColour(Colours::blue);
+            strokePath(g, p, 4);
+        }
+        g.setColour(Colours::panel);
+        g.fillRoundedRectangle(600, 40, 176, 230, 20);
+        text(g, "TABLES", 616, 68, 12, Colours::muted);
+        for (int j = 0; j < names.size(); j++) {
+            if (j == tb) {
+                g.setColour(Colours::dim);
+                g.fillRoundedRectangle(610, 80 + j * 36.0f, 156, 30, 10);
+            }
+            text(g, names[j], 622, 100 + j * 36.0f, 14,
+                 j == tb ? Colours::text : Colours::muted);
+        }
+        text(g,
+             "frame " + String(playing + 1) + " of 9" + utf8(" · ") +
+                 formatFrequency(filterHz()) + utf8(" · encoder 2 sweeps "
+                                                    "through the stack"),
+             140, 300, 13, Colours::muted);
+    }
+
+  private:
+    IntGetter table;
+    Getter position, warp, filterHz;
+    juce::StringArray names;
+    std::function<const std::vector<float> &(int, int)> frame;
+    std::function<float(double, float)> warpPhase;
+};
+
+std::unique_ptr<PlayfulScene>
+wavetable(IntGetter table, Getter position, Getter warp, Getter filterHz,
+          juce::StringArray names,
+          std::function<const std::vector<float> &(int, int)> frame,
+          std::function<float(double, float)> warpPhase) {
+    return std::make_unique<WavetableScene>(table, position, warp, filterHz,
+                                            names, frame, warpPhase);
+}
+
+// Mallets: bars that ring when struck
+class MalletsScene : public PlayfulScene {
+  public:
+    MalletsScene(IntGetter m, Getter h, Getter d, Getter tn,
+                 juce::StringArray n)
+        : material(m), hardness(h), decay(d), tone(tn), names(n) {}
+    String getSubtitle() override { return names[material()].toLowerCase(); }
+    void notePlayed(int note) override {
+        struck = ((note % 12) * 7 / 12) % 7;
+        struckAt = juce::Time::getMillisecondCounterHiRes() / 1000.0;
+    }
+    void paint(Graphics &g, double t) override {
+        int m = material();
+        double now = juce::Time::getMillisecondCounterHiRes() / 1000.0;
+        float since = float(now - struckAt);
+        float ring = std::exp(-since / juce::jmax(0.1f, decay()));
+        Colour a = Colours::orange, b = Colours::yellow;
+        if (m == 1)
+            a = Colours::blue, b = Colours::cream;
+        else if (m == 2)
+            a = Colours::greyKey, b = Colours::yellow;
+        else if (m == 3)
+            a = Colours::muted, b = Colours::text;
+
+        if (m == 3) { // kalimba: a wooden box and metal tines
+            g.setColour(Colours::orange.withAlpha(0.8f));
+            g.fillRoundedRectangle(110, 150, 560, 130, 24);
+            g.setColour(Colours::ink);
+            fillEllipseCentred(g, 390, 230, 26, 26);
+        } else {
+            g.setColour(Colours::dim);
+            g.fillRoundedRectangle(96, 128, 600, 8, 4);
+            g.fillRoundedRectangle(96, 218, 600, 8, 4);
+        }
+        for (int i = 0; i < 7; i++) {
+            float h = 190 - i * 18.0f, x = 110 + i * 82.0f;
+            float shake = i == struck ? 3.0f * ring *
+                                            std::sin(float(t) * 60.0f)
+                                      : 0.0f;
+            g.setColour((i % 2) ? b : a);
+            if (m == 3) {
+                float th = 150 - std::abs(i - 3) * 16.0f;
+                g.fillRoundedRectangle(x + 22 + shake, 160 - th + 60, 18, th,
+                                       9);
+            } else
+                g.fillRoundedRectangle(x + shake, 70 + (190 - h) / 2, 62, h, 14);
+            if (i == struck && ring > 0.05f) {
+                g.setColour(Colours::cream.withAlpha(ring));
+                float top = 70 + (190 - h) / 2;
+                for (int r = 0; r < 3; r++) {
+                    Path wave;
+                    float rr = 20 + r * 14 + (1 - ring) * 30;
+                    wave.addCentredArc(x + 31, top + 40, rr, rr * 0.5f, 0,
+                                       -0.9f, 0.9f, true);
+                    strokePath(g, wave, 2);
+                }
+            }
+        }
+        // the mallet, hovering over the last bar struck
+        float x = 110 + struck * 82.0f + 31;
+        float barTop = 70 + (190 - (190 - struck * 18.0f)) / 2;
+        float lift = since < 0.08f ? 0.0f : juce::jmin(1.0f, (since - 0.08f) * 4);
+        float hy = barTop - 16 - 20 * lift + 2.0f * std::sin(float(t) * 2.0f);
+        g.setColour(Colours::cream);
+        Path stick;
+        stick.startNewSubPath(x - 4, hy - 4);
+        stick.lineTo(x - 52, hy - 36);
+        strokePath(g, stick, 6);
+        float headSize = 12 + 6 * (1 - hardness());
+        g.setColour(Colours::pink.interpolatedWith(Colours::red, hardness()));
+        fillEllipseCentred(g, x, hy, headSize, headSize);
+        drawFace(g, x, hy, 0.6f, ring > 0.3f ? Mood::sing : Mood::smile, t);
+
+        text(g,
+             utf8("material: wood (marimba) · glass · metal (bells) · kalimba"),
+             110, 300, 13, Colours::muted);
+        juce::ignoreUnused(tone);
+    }
+
+  private:
+    IntGetter material;
+    Getter hardness, decay, tone;
+    juce::StringArray names;
+    int struck = 2;
+    double struckAt = -100.0;
+};
+
+std::unique_ptr<PlayfulScene> mallets(IntGetter material, Getter hardness,
+                                      Getter decay, Getter tone,
+                                      juce::StringArray names) {
+    return std::make_unique<MalletsScene>(material, hardness, decay, tone,
+                                          names);
+}
+
+// Granular: the sample, the window the grains come from, and the grains
+class GranularScene : public PlayfulScene {
+  public:
+    GranularScene(TextGetter nm, std::function<std::vector<float>()> ov,
+                  Getter dur, Getter pos, Getter sz, Getter dn, Getter sp,
+                  Getter ph, std::function<bool()> fz)
+        : name(nm), overview(ov), duration(dur), position(pos), size(sz),
+          density(dn), spray(sp), playhead(ph), freeze(fz) {}
+    String getSubtitle() override { return name(); }
+    void paint(Graphics &g, double t) override {
+        auto levels = overview();
+        float pos = position(), sz = size(), dn = density(), sp = spray();
+        float seconds = juce::jmax(0.05f, duration());
+        float head = freeze() ? pos : playhead();
+        if (head < 0)
+            head = pos;
+        const float left = 40, width = 94 * 7.8f;
+        float windowW = juce::jlimit(8.0f, width, sz / seconds * width);
+        float cx = left + head * width;
+        float sprayW = sp * 0.25f * width;
+
+        g.setColour(Colours::panel);
+        g.fillRoundedRectangle(24, 150, 752, 120, 20);
+        for (int i = 0; i < 94 && !levels.empty(); i++) {
+            float level = levels[size_t(i * int(levels.size()) / 94)];
+            float h = 8 + 52 * level;
+            float x = left + i * 7.8f;
+            bool inside = std::abs(x - cx) < windowW / 2 + sprayW;
+            g.setColour(inside ? Colours::cream : Colours::greyKey);
+            g.fillRoundedRectangle(x, 210 - h / 2, 4, h, 2);
+        }
+        if (sprayW > 1) {
+            Path spray;
+            spray.addRoundedRectangle(cx - windowW / 2 - sprayW, 160,
+                                      windowW + 2 * sprayW, 100, 12);
+            g.setColour(Colours::blue.withAlpha(0.6f));
+            strokeDashed(g, spray, 2, 5, 5);
+        }
+        g.setColour(Colours::blue.withAlpha(0.18f));
+        g.fillRoundedRectangle(cx - windowW / 2, 156, windowW, 108, 12);
+        g.setColour(Colours::blue);
+        g.drawRoundedRectangle(cx - windowW / 2, 156, windowW, 108, 12, 2);
+
+        // grains float up from the window
+        static const Colour colours[] = {Colours::blue, Colours::cream,
+                                         Colours::pink};
+        int count = juce::jlimit(4, 40, juce::roundToInt(dn));
+        // a well-mixed random number for grain k in its cycle
+        auto hash = [](int a, int b, int c) {
+            double v = std::sin(a * 12.9898 + b * 78.233 + c * 37.719) * 43758.5453;
+            return float(v - std::floor(v));
+        };
+        for (int k = 0; k < count; k++) {
+            double age = t * 0.5 + k * 0.618;
+            float life = fracOf(age);
+            int cycle = int(std::floor(age));
+            float x = cx + (hash(k, cycle, 1) - 0.5f) * (windowW + 2 * sprayW);
+            float drift = (hash(k, cycle, 2) - 0.5f) * 40 * life;
+            float y = 145 - life * 105;
+            float r = 3 + 3 * hash(k, cycle, 3);
+            g.setColour(colours[k % 3].withAlpha(0.85f * (1 - life)));
+            fillEllipseCentred(g, x + drift, y, r, r);
+        }
+        Path cloud = svg("M560 110 a34 34 0 0 1 60 -24 a30 30 0 0 1 56 16 "
+                         "a24 24 0 0 1 -6 46 h-104 a26 26 0 0 1 -6 -38z");
+        float bob = 3.0f * std::sin(float(t) * 1.5f);
+        g.setColour(Colours::cream);
+        g.fillPath(cloud, AffineTransform::translation(0, bob));
+        drawFace(g, 612, 118 + bob, 1.0f, Mood::sing, t);
+
+        text(g,
+             name() + utf8(" · ") + String(juce::roundToInt(dn)) +
+                 " grains a second from the blue window" +
+                 (freeze() ? " (frozen)" : ""),
+             40, 296, 13, Colours::muted);
+    }
+
+  private:
+    TextGetter name;
+    std::function<std::vector<float>()> overview;
+    Getter duration, position, size, density, spray, playhead;
+    std::function<bool()> freeze;
+};
+
+std::unique_ptr<PlayfulScene>
+granular(TextGetter sampleName, std::function<std::vector<float>()> overview,
+         Getter durationSeconds, Getter position, Getter size, Getter density,
+         Getter spray, Getter playhead, std::function<bool()> freeze) {
+    return std::make_unique<GranularScene>(sampleName, overview,
+                                           durationSeconds, position, size,
+                                           density, spray, playhead, freeze);
+}
+
+// Drum Synth: 8 pads and the sound of the selected one
+class DrumSynthScene : public PlayfulScene {
+  public:
+    DrumSynthScene(IntGetter sel, std::function<void(int)> sl,
+                   std::function<double(int)> hit, juce::StringArray n,
+                   std::function<std::array<float, 6>(int)> pr,
+                   std::function<std::vector<float>(int)> pv,
+                   std::function<String(int)> desc)
+        : selected(sel), select(sl), lastHit(hit), names(n), params(pr),
+          preview(pv), describe(desc) {}
+    String getSubtitle() override { return names[selected()]; }
+    void notePlayed(int note) override {
+        select(((note - 53) % 8 + 8) % 8);
+    }
+    void paint(Graphics &g, double t) override {
+        static const Colour colours[] = {Colours::pink,   Colours::yellow,
+                                         Colours::green,  Colours::blue,
+                                         Colours::purple, Colours::orange,
+                                         Colours::pink,   Colours::yellow};
+        int sel = selected();
+        double now = juce::Time::getMillisecondCounterHiRes();
+        for (int i = 0; i < 8; i++) {
+            float x = 24 + (i % 4) * 84.0f, y = 30 + (i / 4) * 112.0f;
+            float since = float(now - lastHit(i)) / 1000.0f;
+            float squash = since < 0.15f ? 1.0f - 0.12f * (1 - since / 0.15f)
+                                         : 1.0f;
+            float w = 72 * (2 - squash), h = 72 * squash;
+            g.setColour(colours[i]);
+            g.fillRoundedRectangle(x + 36 - w / 2, y + 72 - h, w, h, 18);
+            if (i == sel) {
+                g.setColour(Colours::cream);
+                g.drawRoundedRectangle(x + 36 - w / 2, y + 72 - h, w, h, 18, 3);
+            }
+            drawFace(g, x + 36, y + 72 - h / 2, 0.8f,
+                     since < 0.3f ? Mood::sing : Mood::smile, t);
+            text(g, names[i], x + 36, y + 92, 12, Colours::muted, false,
+                 juce::Justification::horizontallyCentred);
+        }
+
+        // the selected pad's sound, recalculated when its knobs change
+        auto p = params(sel);
+        if (sel != cachedPad || p != cachedParams) {
+            cachedPad = sel;
+            cachedParams = p;
+            wave = preview(sel);
+        }
+        g.setColour(Colours::panel);
+        g.fillRoundedRectangle(364, 24, 412, 220, 20);
+        float peak = 1.0e-4f;
+        for (auto v : wave)
+            peak = juce::jmax(peak, std::abs(v));
+        Path pth;
+        int n = int(wave.size());
+        for (int i = 0; i < 380 && n > 0; i++) {
+            float v = wave[size_t(i * n / 380)] / peak;
+            float x = 380 + i * 1.0f, y = 140 - 72 * v;
+            if (i == 0)
+                pth.startNewSubPath(x, y);
+            else
+                pth.lineTo(x, y);
+        }
+        g.setColour(colours[sel]);
+        strokePath(g, pth, 2.5f);
+        text(g, names[sel].toUpperCase() + utf8(" · ") + describe(sel), 384, 52,
+             13, Colours::muted);
+        text(g, "first 0.4 s of the sound", 756, 234, 11, Colours::muted, false,
+             juce::Justification::right);
+    }
+
+  private:
+    IntGetter selected;
+    std::function<void(int)> select;
+    std::function<double(int)> lastHit;
+    juce::StringArray names;
+    std::function<std::array<float, 6>(int)> params;
+    std::function<std::vector<float>(int)> preview;
+    std::function<String(int)> describe;
+    int cachedPad = -1;
+    std::array<float, 6> cachedParams{};
+    std::vector<float> wave;
+};
+
+std::unique_ptr<PlayfulScene>
+drumSynth(IntGetter selectedPad, std::function<void(int)> selectPad,
+          std::function<double(int)> lastHitMs, juce::StringArray padNames,
+          std::function<std::array<float, 6>(int)> padParams,
+          std::function<std::vector<float>(int)> preview,
+          std::function<String(int)> describe) {
+    return std::make_unique<DrumSynthScene>(selectedPad, selectPad, lastHitMs,
+                                            padNames, padParams, preview,
+                                            describe);
+}
+
 } // namespace PlayfulScenes

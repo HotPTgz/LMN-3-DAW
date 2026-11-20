@@ -9,3 +9,5 @@
 #include "Engines/EnginePlugins.cpp"
 #include "Effects/FxDsp.cpp"
 #include "Effects/FxPlugins.cpp"
+#include "Instruments/InstrumentDsp.cpp"
+#include "Instruments/InstrumentPlugins.cpp"
