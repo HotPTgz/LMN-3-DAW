@@ -1,6 +1,7 @@
 #include "PlayfulFactory.h"
 #include "PlayfulParamScreen.h"
 #include "PlayfulScenes.h"
+#include <app_configuration/app_configuration.h>
 #include <app_view_models/app_view_models.h>
 #include <internal_plugins/internal_plugins.h>
 
@@ -350,7 +351,67 @@ createEngineScreen(internal_plugins::EnginePlugin *engine,
     };
 
     std::unique_ptr<PlayfulScene> soundScene;
-    if (dynamic_cast<internal_plugins::StringEnginePlugin *>(engine))
+    namespace inst = internal_plugins::instruments;
+    if (dynamic_cast<internal_plugins::WavetableEnginePlugin *>(engine))
+        soundScene = S::wavetable(
+            [engine] { return juce::roundToInt(engine->getSoundValue(0)); },
+            sound(1), sound(2),
+            [engine] {
+                return internal_plugins::WavetableEnginePlugin::brightnessHz(
+                    engine->getSoundValue(3));
+            },
+            inst::Wavetables::getNames(),
+            [](int table, int frame) -> const std::vector<float> & {
+                return inst::Wavetables::get().frame(table, frame);
+            },
+            [](double phase, float warp) {
+                return inst::WavetableSound::warpPhase(phase, warp);
+            });
+    else if (dynamic_cast<internal_plugins::MalletsEnginePlugin *>(engine))
+        soundScene = S::mallets(
+            [engine] { return juce::roundToInt(engine->getSoundValue(0)); },
+            sound(1), sound(2), sound(3), inst::Mallets::getMaterialNames());
+    else if (auto grains =
+                 dynamic_cast<internal_plugins::GranularEnginePlugin *>(engine)) {
+        soundScene = S::granular(
+            [grains] { return grains->getSample()->name; },
+            [grains] { return grains->getSample()->overview; },
+            [grains] {
+                auto sample = grains->getSample();
+                return float(sample->audio.getNumSamples() / sample->sampleRate);
+            },
+            sound(0), sound(1), sound(2), sound(3),
+            [grains] { return grains->getPlayhead(); },
+            [engine] { return engine->getSoundValue(6) > 0.5f; });
+        // the 8th sound knob picks the sample (the level stays as it is)
+        auto files = std::make_shared<juce::Array<juce::File>>();
+        auto rescan = [grains, files] {
+            files->clear();
+            files->add(juce::File()); // the built-in voice
+            auto dir = ConfigurationHelpers::getTempSamplesDirectory(
+                grains->edit.engine);
+            auto found = dir.findChildFiles(juce::File::findFiles, true,
+                                            "*.wav;*.aif;*.aiff;*.flac");
+            found.sort();
+            files->addArray(found);
+        };
+        rescan();
+        Param sample;
+        sample.label = "SAMPLE";
+        sample.text = [grains] { return grains->getSample()->name; };
+        sample.normalised = [grains, files] {
+            int index = juce::jmax(0, files->indexOf(grains->getSampleFile()));
+            return files->size() > 1 ? index / float(files->size() - 1) : 0.0f;
+        };
+        sample.nudge = [grains, files, rescan](int direction) {
+            rescan();
+            int index = juce::jmax(0, files->indexOf(grains->getSampleFile()));
+            index = juce::jlimit(0, files->size() - 1, index + direction);
+            grains->setSampleFile((*files)[index]);
+        };
+        if (params.size() > 7)
+            params[7] = sample;
+    } else if (dynamic_cast<internal_plugins::StringEnginePlugin *>(engine))
         soundScene = S::stringEngine(sound(0), sound(1), sound(2), sound(3));
     else if (dynamic_cast<internal_plugins::FmEnginePlugin *>(engine))
         soundScene = S::fmEngine(
@@ -570,6 +631,59 @@ createPlayfulPluginView(tracktion::Plugin *plugin,
                       S::pitchShift([pitch] {
                           return pitch->semitones->getCurrentValue();
                       }));
+    }
+
+    if (auto drums = dynamic_cast<internal_plugins::DrumSynthPlugin *>(plugin)) {
+        using Kit = internal_plugins::instruments::DrumKit;
+        // the knobs edit whichever pad was played last
+        std::vector<Param> params;
+        static const char *labels[] = {"PITCH", "PUNCH", "DECAY",
+                                       "TONE",  "NOISE", "DRIVE"};
+        for (int k = 0; k < Kit::numParams; k++) {
+            Param p;
+            p.label = labels[k];
+            p.normalised = [drums, k] {
+                return drums->getParameter(drums->selectedPad, k)
+                    ->getCurrentNormalisedValue();
+            };
+            p.text = [drums, k] {
+                return drums->getParameter(drums->selectedPad, k)
+                    ->getCurrentValueAsString();
+            };
+            p.nudge = [drums, k](int direction) {
+                auto param = drums->getParameter(drums->selectedPad, k);
+                if (param->getModifiers().size() > 0)
+                    return;
+                param->setParameter(
+                    juce::jlimit(0.0f, 1.0f,
+                                 param->getCurrentBaseValue() + direction * 0.02f),
+                    juce::sendNotification);
+            };
+            params.push_back(p);
+        }
+        return screen(
+            mcm, "Drum Synth", std::move(params),
+            S::drumSynth(
+                [drums] { return drums->selectedPad.load(); },
+                [drums](int pad) { drums->selectedPad = pad; },
+                [drums](int pad) { return drums->lastHit[size_t(pad)].load(); },
+                Kit::getPadNames(),
+                [drums](int pad) {
+                    auto p = drums->getPadParams(pad);
+                    std::array<float, 6> a;
+                    for (size_t k = 0; k < 6; k++)
+                        a[k] = p[k];
+                    return a;
+                },
+                [drums](int pad) {
+                    return Kit::preview(pad, drums->getPadParams(pad), 22050.0,
+                                        8820);
+                },
+                [drums](int pad) {
+                    auto p = drums->getPadParams(pad);
+                    String punch = p[1] > 0.6f ? ", punchy" : p[1] < 0.25f ? ", soft" : "";
+                    return Kit::describe(pad, 0, p[0]) + punch;
+                }));
     }
 
     if (auto fourOsc = dynamic_cast<tracktion::FourOscPlugin *>(plugin))

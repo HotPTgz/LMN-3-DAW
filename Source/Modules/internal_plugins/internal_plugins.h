@@ -31,6 +31,10 @@ namespace internal_plugins {
     class ResonantFilterPlugin;
     class DuckerPlugin;
     class BeatRepeatPlugin;
+    class WavetableEnginePlugin;
+    class MalletsEnginePlugin;
+    class GranularEnginePlugin;
+    class DrumSynthPlugin;
     class EnginePlugin;
     class StringEnginePlugin;
     class FmEnginePlugin;
@@ -57,6 +61,8 @@ namespace internal_plugins {
 #include "Engines/EnginePlugins.h"
 #include "Effects/FxDsp.h"
 #include "Effects/FxPlugins.h"
+#include "Instruments/InstrumentDsp.h"
+#include "Instruments/InstrumentPlugins.h"
 
 
 

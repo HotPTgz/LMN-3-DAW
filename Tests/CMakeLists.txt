@@ -41,6 +41,7 @@ target_sources(Tests PRIVATE
         app_view_models/Utilities/MidiFxTest.cpp
         app_view_models/Utilities/MoreMidiFxTest.cpp
         app_view_models/Utilities/FxDspTest.cpp
+        app_view_models/Utilities/InstrumentDspTest.cpp
         app_view_models/Utilities/AuxSendsAndModifiersTest.cpp
         app_configuration/AnimationsConfigTest.cpp
         app_view_models/Utilities/EnginesTest.cpp

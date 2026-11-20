@@ -109,6 +109,14 @@ class GuiAppApplication : public juce::JUCEApplication {
         engine.getPluginManager()
             .createBuiltInType<internal_plugins::BeatRepeatPlugin>();
         engine.getPluginManager()
+            .createBuiltInType<internal_plugins::WavetableEnginePlugin>();
+        engine.getPluginManager()
+            .createBuiltInType<internal_plugins::MalletsEnginePlugin>();
+        engine.getPluginManager()
+            .createBuiltInType<internal_plugins::GranularEnginePlugin>();
+        engine.getPluginManager()
+            .createBuiltInType<internal_plugins::DrumSynthPlugin>();
+        engine.getPluginManager()
             .createBuiltInType<internal_plugins::StringEnginePlugin>();
         engine.getPluginManager()
             .createBuiltInType<internal_plugins::FmEnginePlugin>();
