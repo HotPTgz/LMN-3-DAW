@@ -257,6 +257,36 @@ TEST(HumaniseTest, zeroAmountChangesNothing) {
     EXPECT_EQ(hits[0].velocity, 77);
 }
 
+TEST(NoteRepeatTest, noteArrivingWithAllNotesOffStillRepeats) {
+    NoteRepeatEngine engine;
+    NoteRepeatEngine::Settings s; // 1/16
+    const double block = 0.01;
+    auto events = run(30, block, {{0, {on(60, 100, 0.0)}}},
+                      [&](tracktion::MidiMessageArray &m, int b) {
+                          if (b == 0)
+                              m.isAllNotesOff = true; // playback starts
+                          engine.process(m, b * block * 2.0, 2.0, block, s);
+                      });
+    EXPECT_GE(ons(events).size(), 2u); // 0 s and 0.125 s
+}
+
+TEST(EchoTest, noteArrivingWithAllNotesOffStillEchoes) {
+    EchoEngine engine;
+    EchoEngine::Settings s;
+    s.timeBeats = 0.5;
+    s.repeats = 2;
+    const double block = 0.01;
+    auto events =
+        run(80, block, {{0, {on(60, 100, 0.0)}}, {10, {off(60, 0.0)}}},
+            [&](tracktion::MidiMessageArray &m, int b) {
+                if (b == 0)
+                    m.isAllNotesOff = true;
+                engine.process(m, 2.0, block, s);
+            });
+    EXPECT_EQ(ons(events).size(), 3u);
+    expectBalanced(events);
+}
+
 //==============================================================================
 TEST(EchoTest, echoesGetQuieterAndTranspose) {
     EchoEngine engine;

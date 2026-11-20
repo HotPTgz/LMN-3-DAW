@@ -90,7 +90,7 @@ void NoteRepeatEngine::process(tracktion::MidiMessageArray &midi,
         for (auto &s : sounding)
             addAt(midi, juce::MidiMessage::noteOff(channel, s.note), 0.0);
         sounding.clear();
-        return;
+        // and carry on: the notes that came with it start the new pass
     }
     if (beatsPerSecond <= 0.0 || blockSeconds <= 0.0)
         return;
@@ -216,11 +216,8 @@ void StrumEngine::process(tracktion::MidiMessageArray &midi,
                           double blockSeconds, const Settings &settings) {
     bool allOff = false;
     auto notes = takeNotes(midi, allOff);
-    if (allOff) {
-        scheduler.clear();
-        now += blockSeconds;
-        return;
-    }
+    if (allOff)
+        scheduler.clear(); // then take the notes that came with it
 
     // note ons less than 5 ms apart are one chord
     for (size_t i = 0; i < notes.size();) {
@@ -267,11 +264,8 @@ void HumaniseEngine::process(tracktion::MidiMessageArray &midi,
                              double blockSeconds, const Settings &settings) {
     bool allOff = false;
     auto notes = takeNotes(midi, allOff);
-    if (allOff) {
-        scheduler.clear();
-        now += blockSeconds;
-        return;
-    }
+    if (allOff)
+        scheduler.clear(); // then take the notes that came with it
     const double amount = juce::jlimit(0.0, 1.0, settings.amount);
     for (auto &m : notes) {
         int note = m.getNoteNumber();
@@ -316,11 +310,8 @@ void EchoEngine::process(tracktion::MidiMessageArray &midi,
                          const Settings &settings) {
     bool allOff = false;
     auto notes = takeNotes(midi, allOff);
-    if (allOff) {
-        scheduler.clear();
-        now += blockSeconds;
-        return;
-    }
+    if (allOff)
+        scheduler.clear(); // then take the notes that came with it
     const double step =
         beatsPerSecond > 0 ? settings.timeBeats / beatsPerSecond : 0.25;
     for (auto &m : notes) {
@@ -463,7 +454,7 @@ void FingerEngine::process(tracktion::MidiMessageArray &midi,
         for (auto &o : offs)
             addAt(midi, juce::MidiMessage::noteOff(channel, o.note), 0.0);
         offs.clear();
-        return;
+        // and carry on with the keys that came with it
     }
     if (beatsPerSecond <= 0.0 || blockSeconds <= 0.0)
         return;
