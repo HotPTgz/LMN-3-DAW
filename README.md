@@ -1,7 +1,7 @@
 # LMN-3-DAW (extended fork)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-**A bigger, friendlier software for the [LMN-3](https://github.com/FundamentalFrequency) DIY groovebox.** This is a fork of [FundamentalFrequency/LMN-3-DAW](https://github.com/FundamentalFrequency/LMN-3-DAW) by Stone Preston. It runs on the same LMN-3 you already built, with no hardware changes, and keeps everything the original does. On top of that, every screen is redrawn, and it adds three new synths, five sequencers, MIDI effects, more modulation, VST3 plugins, several projects, and Windows and Android versions.
+**A bigger, friendlier software for the [LMN-3](https://github.com/FundamentalFrequency) DIY groovebox.** This is a fork of [FundamentalFrequency/LMN-3-DAW](https://github.com/FundamentalFrequency/LMN-3-DAW) by Stone Preston. It runs on the same LMN-3 you already built, with no hardware changes, and keeps everything the original does. On top of that, every screen is redrawn, and it adds six new synths and a drum synth, nine sequencers, ten new effects, seven MIDI effects, more modulation, VST3 plugins, several projects, and Windows and Android versions.
 
 <img src="docs/images/tracks.png" width="32%"> <img src="docs/images/fm.png" width="32%"> <img src="docs/images/drums.png" width="32%">
 <img src="docs/images/tombola.png" width="32%"> <img src="docs/images/chord.png" width="32%"> <img src="docs/images/mixer.png" width="32%">
@@ -114,7 +114,7 @@ Animations can be turned off in `config.yaml` (`animations: false`) to save CPU.
 
 ### Instruments
 
-Besides the original 4OSC and Sampler, there are three new synth engines and a drum sampler. Each has its own animated screen.
+Besides the original 4OSC and Sampler, there are six new synth engines, a drum synth and a drum sampler. Each has its own animated screen.
 
 <img src="docs/images/osc4.png" width="49%"> <img src="docs/images/string.png" width="49%">
 
@@ -135,12 +135,34 @@ Besides the original 4OSC and Sampler, there are three new synth engines and a d
 
 - **Drum Sampler**: 24 pads, one per key, loaded from a drum kit folder. Pick the kit with encoder 1, then set each pad's start, end and gain.
 
+<img src="docs/images/drumsynth.png" width="49%"> <img src="docs/images/granular.png" width="49%">
+
+- **Drum Synth** (left): eight drums made from oscillators and noise, no samples needed: kick, snare, clap, rim, hat, open hat (a closed hat chokes it), tom and cowbell. The knobs edit the last pad you played (pitch, punch, decay, tone; Control: noise, drive), and the panel draws that pad's sound.
+- **Granular** (right): sprays tiny grains of a sample into pads and textures. Position, size, density and spray; Control: pitch, spread, freeze and the sample (any file in your samples folder, or the built-in sung voice).
+
+<img src="docs/images/wavetable.png" width="49%"> <img src="docs/images/mallets.png" width="49%">
+
+- **Wavetable** (left): five tables (glass, sine to saw, vocal, metal, PWM) of nine waves each; encoder 2 sweeps smoothly through the stack. Warp bends the wave, and with Control a position envelope moves it on every note.
+- **Mallets** (right): struck wood (marimba), glass, metal bells and kalimba tines, modelled from their resonances. Material, hardness, decay, tone; Control: body, strike position, click and level.
+
+Like String, FM and Pulse, the new instruments share the Shape page (envelope, filter, voices).
+
 ### Effects and the plugin chain
 
 <img src="docs/images/chain.png" width="49%"> <img src="docs/images/reverb.png" width="49%">
 
 - **Plugins screen** (left): a track's chain, left to right in the order the sound travels: MIDI FX → instrument → effects → volume. Add with +, remove with −, move a plugin with encoder 3, bypass with encoder 4.
 - **Effects**: 4-band equaliser, reverb (right), delay, chorus, phaser, compressor, low/high-pass filter and a new **Pitch Shift**. Each one has its own animated screen.
+
+<img src="docs/images/tape.png" width="32%"> <img src="docs/images/lofi.png" width="32%"> <img src="docs/images/drive.png" width="32%">
+<img src="docs/images/resonant_filter.png" width="32%"> <img src="docs/images/ducker.png" width="32%"> <img src="docs/images/beatrepeat.png" width="32%">
+
+- **Tape**: wow, flutter, saturation and hiss, for that warm, wobbly tape sound. Control: age (darker, with dropouts) and tone.
+- **Lo-fi**: a bitcrusher: fewer bits and a lower sample rate, with noise and vinyl crackle. Control: a filter after the crush.
+- **Drive**: soft clip, hard clip, fuzz or wavefold, with tone and mix. Control: output level.
+- **Filter**: a resonant filter (low-pass 24 or 12, high-pass, band-pass, notch) that moves by itself: an envelope follows how loud the sound is and an LFO runs in time with the song. Control: type, envelope release, LFO rate.
+- **Ducker**: sidechain pumping. It dips this track on every beat, or every time another track hits (set SOURCE to that track, e.g. the kick), then lets it breathe back. Depth, release and shape.
+- **Beat Repeat**: hold encoder 1 and the last slice (1/2 to 1/32) repeats from the next beat, in time; let go to stop. Repeats (or Hold), decay and pitch change each repeat.
 
 ### MIDI FX
 
@@ -151,6 +173,14 @@ MIDI FX sit before the instrument and change the notes you play.
 - **Chord** (above): one key plays a whole chord. Choose the chord type, inversion and voicing; the keyboard shows the notes and the cake stacks them.
 - **Arpeggiator**: plays held notes one after another: mode (up, down…), rate, octaves, gate and latch.
 - **Scale lock**: keeps every note in a chosen root and scale, so nothing sounds wrong.
+
+<img src="docs/images/noterepeat.png" width="49%"> <img src="docs/images/strum.png" width="49%">
+<img src="docs/images/humanise.png" width="49%"> <img src="docs/images/midiecho.png" width="49%">
+
+- **Note Repeat**: hold a key and it repeats in time (1/4 to 1/32, triplets too), for hi-hat rolls. Ramp makes the repeats louder or quieter; gate and swing.
+- **Strum**: spreads a chord's notes out in time like a guitar strum: time between notes, up or down, alternating, and a curve that speeds up or slows down.
+- **Humanise**: small random changes to timing, velocity and length, so step patterns feel played. Amount scales all three.
+- **MIDI Echo**: repeats each note in time (1/16 to 1/2, dotted and triplet), quieter each time, optionally transposed by a step each echo (e.g. +7 for fifths).
 
 ### Modulation
 
@@ -176,6 +206,14 @@ Press Sequencers to pick one for the selected track. Each writes an ordinary MID
 - **Endless**: press + and play notes one at a time (− adds a rest), + again to finish. While it plays, a key transposes the loop. Encoders: rate, gate, swing, transpose (press: reset).
 - **Tombola**: each key drops a ball (up to 8), − removes the newest. Balls bounce in a spinning shape and play their note when they hit a wall. Encoders: spin, gravity, sides, bounce (press: shake).
 - **Pattern**: four 16-step patterns A to D played in a chain. Encoders: pattern, step, chain link (press: add a link; with Control turn to change its letter, press to remove it), octave shown (press: copy the pattern to the next letter).
+
+<img src="docs/images/euclidean.png" width="49%"> <img src="docs/images/finger.png" width="49%">
+<img src="docs/images/progression.png" width="49%"> <img src="docs/images/turing.png" width="49%">
+
+- **Euclidean**: each kit sound gets a ring of steps with its hits spread as evenly as they go; rotate shifts them. A few rings make a groove, and rings of different lengths make polyrhythms. Encoders: sound (press: next one, or play a key), hits, steps, rotate; Control: velocity, swing.
+- **Finger**: each of 12 keys plays a drum pattern while you hold it (four on the floor, boom bap, half time, shuffle, breakbeat, dembow, two step, trap, disco, bossa and two fills), in time with the song, OP-1 style. Hold several to layer them. The knobs edit the last key played: pattern, variation (busier, open hats, a fill) and length; KEY moves the 12 keys. It plays live, so it works as a MIDI effect at the front of the track, and finds the kick, snare and hats in your kit by name (or uses the Drum Synth's pads).
+- **Chords**: a chord per bar in a key (with presets like I · V · vi · IV). This track plays the chords, and FOLLOW makes up to three of the next tracks play along: bass roots, an arpeggio and a pad, each written as its own clip. A key sets the key's root.
+- **Turing**: a looping random melody, always in scale. Locked, it repeats; open the lock and it changes a little each time round. Encoders: lock (press: a new melody), length, range, scale; a key sets the lowest note; Control: rate and gate.
 
 ### Mixer
 
