@@ -128,6 +128,10 @@ def file_xml(path, compile_=True):
             f'resource="0" file={quoteattr(rel(path))}/>')
 
 files = "\n".join(file_xml(p) for p in sources + generated + yaml)
+# the app's launcher icon (the Projucer turns it into the drawable-*/icon.png set)
+ICON = "Assets/AppIcon/limoncello_icon_512.png"
+icon_xml = (f'      <FILE id="{uid(ICON)}" name="{pathlib.Path(ICON).name}" compile="0" '
+            f'resource="0" file={quoteattr(rel(ICON))}/>')
 modules = "\n".join(f'    <MODULE id="{m}" showAllCode="0" useLocalCopy="0" useGlobalPath="0"/>'
                     for m in module_paths)
 paths = "\n".join(f'        <MODULEPATH id="{m}" path={quoteattr(p)}/>'
@@ -146,6 +150,9 @@ jucer = f'''<?xml version="1.0" encoding="UTF-8"?>
     <GROUP id="sRcGrP" name="Source">
 {files}
     </GROUP>
+    <GROUP id="iCoNgRp" name="Icons">
+{icon_xml}
+    </GROUP>
   </MAINGROUP>
   <MODULES>
 {modules}
@@ -161,6 +168,7 @@ jucer = f'''<?xml version="1.0" encoding="UTF-8"?>
                    androidVersionCode="{version.replace('.', '')}"
                    androidKeyStore="../../../lmn3-android.keystore" androidKeyStorePass="lmn3lmn3"
                    androidKeyAlias="lmn3" androidKeyAliasPass="lmn3lmn3"
+                   bigIcon="{uid(ICON)}" smallIcon="{uid(ICON)}"
                    extraCompilerFlags="-Wno-everything">
       <CONFIGURATIONS>
         <CONFIGURATION name="Debug" isDebug="1" androidArchitectures="{abis}" optimisation="1"
