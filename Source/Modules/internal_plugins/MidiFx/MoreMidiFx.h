@@ -173,6 +173,15 @@ class FingerEngine {
   private:
     juce::uint32 heldMask = 0;
     int lastSlot = 0, channel = 10;
+    // what each key did when it went down (a pattern slot, or passThrough),
+    // so it's let go the same way even if the Key knob moved meanwhile
+    static constexpr signed char passThrough = -1, notHeld = -2;
+    std::array<signed char, 128> keyRoute = makeKeyRoute();
+    static std::array<signed char, 128> makeKeyRoute() {
+        std::array<signed char, 128> r;
+        r.fill(notHeld);
+        return r;
+    }
     double lastStepBeat = -1.0e9;
     struct Off {
         int note;

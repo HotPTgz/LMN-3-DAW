@@ -26,7 +26,7 @@ int stepPasses(const StepInput &input) {
     int passes = input.groove.direction == Direction::pingPong ? 2 : 1;
     bool varies = input.groove.direction == Direction::random ||
                   input.groove.humanize > 0.0;
-    for (int s = 0; s < input.length && !varies; s++)
+    for (int s = 0; s < juce::jlimit(1, 16, input.length) && !varies; s++)
         if (!input.notes[size_t(s)].isEmpty() &&
             input.tricks[size_t(s)].chance < 1.0f)
             varies = true;
@@ -56,6 +56,7 @@ std::vector<NoteEvent> generateStep(const StepInput &input, juce::int64 seed) {
     double gate = juce::jlimit(0.1, 1.0, input.groove.gate);
     double humanize = juce::jlimit(0.0, 1.0, input.groove.humanize);
     int passes = stepPasses(input);
+    const double clipLength = passes * length * stepLength;
 
     for (int pass = 0; pass < passes; pass++) {
         for (int slot = 0; slot < length; slot++) {
@@ -79,6 +80,11 @@ std::vector<NoteEvent> generateStep(const StepInput &input, juce::int64 seed) {
 
             for (int hit = 0; hit < ratchet; hit++) {
                 double hitStart = start + hit * stepLength / ratchet;
+                // swing and ratchets can push the last hits of the last step
+                // past the end of the clip, where they'd never play: they
+                // come round at the start of the loop instead
+                if (hitStart >= clipLength)
+                    hitStart -= clipLength;
                 double hitLength =
                     ratchet == 1 ? (tie - 1) * stepLength + stepLength * gate
                                  : stepLength / ratchet * gate;
@@ -138,7 +144,10 @@ int drumVelocity(int cell, float level) {
 }
 
 int drumPasses(const DrumInput &input) {
-    return input.fillEvery > 1 && !input.fill.isEmpty() ? input.fillEvery : 1;
+    // (the screen offers 2, 4 or 8; a damaged project could hold anything)
+    return input.fillEvery > 1 && !input.fill.isEmpty()
+               ? juce::jmin(8, input.fillEvery)
+               : 1;
 }
 
 std::vector<NoteEvent> generateDrums(const DrumInput &input) {
@@ -165,11 +174,19 @@ std::vector<NoteEvent> generateDrums(const DrumInput &input) {
 }
 
 //==============================================================================
-double endlessLength(const EndlessInput &input) {
-    return juce::jmax(1, input.notes.size()) * input.stepLength;
+static double endlessStep(const EndlessInput &input) {
+    return std::isfinite(input.stepLength)
+               ? juce::jlimit(0.0625, 1.0, input.stepLength)
+               : 0.25;
 }
 
-std::vector<NoteEvent> generateEndless(const EndlessInput &input) {
+double endlessLength(const EndlessInput &input) {
+    return juce::jmax(1, input.notes.size()) * endlessStep(input);
+}
+
+std::vector<NoteEvent> generateEndless(const EndlessInput &unchecked) {
+    auto input = unchecked;
+    input.stepLength = endlessStep(unchecked);
     std::vector<NoteEvent> events;
     for (int i = 0; i < input.notes.size(); i++) {
         int note = input.notes[i];
@@ -254,7 +271,8 @@ TombolaSimulation::TombolaSimulation(const TombolaInput &in) : input(in) {
                                 30, 127,
                                 juce::roundToInt(40.0 + normalSpeed * 30.0));
                             notes.push_back(
-                                {input.balls[i], start, 0.25, velocity});
+                                {juce::jlimit(0, 127, input.balls[i]), start,
+                                 0.25, velocity});
                         }
                     }
                 }

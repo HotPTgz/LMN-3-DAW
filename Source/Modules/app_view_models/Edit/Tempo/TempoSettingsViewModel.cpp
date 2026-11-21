@@ -31,10 +31,13 @@ void TempoSettingsViewModel::setClickTrackGain(const double gain) const {
         edit.clickTrackGain.setValue(gain, nullptr);
 }
 
+// Tempo changes go through TempoSetting::setBpm, which moves the clips and
+// the loop with the beat. Writing the bpm property directly kept clips at
+// the same length in seconds, so a slower tempo cut the end off every clip.
 void TempoSettingsViewModel::setBpm(const double bpm) const {
     if (bpm <= bpmUpperLimit && bpm >= bpmLowerLimit)
         edit.tempoSequence.getTempoAt(tracktion::TimePosition::fromSeconds(0.0))
-            .bpm.setValue(bpm, nullptr);
+            .setBpm(bpm);
 }
 
 void TempoSettingsViewModel::incrementBpm() const {
@@ -46,7 +49,7 @@ void TempoSettingsViewModel::incrementBpm() const {
                 .bpm.get() +
             1;
         edit.tempoSequence.getTempoAt(tracktion::TimePosition::fromSeconds(0.0))
-            .bpm.setValue(newBpm, nullptr);
+            .setBpm(newBpm);
     }
 }
 
@@ -59,7 +62,7 @@ void TempoSettingsViewModel::decrementBpm() const {
                 .bpm.get() -
             1;
         edit.tempoSequence.getTempoAt(tracktion::TimePosition::fromSeconds(0.0))
-            .bpm.setValue(newBpm, nullptr);
+            .setBpm(newBpm);
     }
 }
 
@@ -213,7 +216,7 @@ void TempoSettingsViewModel::enableTapMode() {
         int averageBPM = averageBPS * 60;
         int newBpm = juce::jlimit(bpmLowerLimit, bpmUpperLimit, averageBPM);
         edit.tempoSequence.getTempoAt(tracktion::TimePosition::fromSeconds(0.0))
-            .bpm.setValue(newBpm, nullptr);
+            .setBpm(newBpm);
     }
 }
 
