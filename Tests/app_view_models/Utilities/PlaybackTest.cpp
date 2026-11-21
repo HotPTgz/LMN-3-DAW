@@ -256,8 +256,27 @@ class PlaybackHarness {
         return notes;
     }
 
-    const double sampleRate;
-    const int blockSize;
+    // Like picking a new sample rate or buffer size in Settings while the
+    // song plays
+    void switchDevice(double rate, int block) {
+        sampleRate = rate;
+        blockSize = block;
+        const bool wasPlaying = edit->getTransport().isPlaying();
+        tracktion::HostedAudioDeviceInterface::Parameters p;
+        p.sampleRate = rate;
+        p.blockSize = block;
+        p.fixedBlockSize = true;
+        engine.getDeviceManager().getHostedAudioDeviceInterface().initialise(p);
+        pump(50);
+        // restarting the device stops the song, as it does in the app: play
+        // on
+        if (wasPlaying)
+            edit->getTransport().play(false);
+        pump();
+    }
+
+    double sampleRate;
+    int blockSize;
     tracktion::Engine engine{"ENGINE", nullptr,
                              std::make_unique<SingleThreadedBehaviour>()};
     std::unique_ptr<tracktion::Edit> edit;
@@ -609,6 +628,549 @@ INSTANTIATE_TEST_SUITE_P(
     });
 
 //==============================================================================
+// Modifiers: an LFO, Step, Random, Envelope or MIDI tracker on every knob of
+// every plugin, while notes play. Modulated knobs change on the audio thread.
+// Then save and reload (the modifiers must still be attached), and delete the
+// plugin while it plays with its modifiers still on.
+namespace {
+const char *const modifierTypes[] = {"LFO", "STEP", "RANDOM",
+                                     "ENVELOPEFOLLOWER", "MIDITRACKER"};
+} // namespace
+
+class ModifierTest : public ::testing::TestWithParam<std::tuple<int, int>> {};
+
+TEST_P(ModifierTest, modulatedKnobsPlaySaveAndDelete) {
+    auto c = stressCases[std::get<0>(GetParam())];
+    const juce::Identifier modifierType = modifierTypes[std::get<1>(GetParam())];
+    auto file = juce::File::createTempFile(".tracktionedit");
+    int attached = 0;
+    {
+        PlaybackHarness h(48000.0, 200);
+        auto plugin = h.add(c.type);
+        if (!c.isInstrument)
+            h.add(PulseEnginePlugin::xmlTypeName);
+        h.addNotes({{{48, 0.0, 0.5}}, {{60, 1.0, 1.0}}, {{64, 1.0, 1.0}},
+                    {{55, 2.0, 2.0}}, {{72, 3.5, 0.25}}},
+                   4.0);
+        auto &track = h.track();
+        for (auto p : plugin->getAutomatableParameters()) {
+            auto modifier = track.getModifierList().insertModifier(
+                juce::ValueTree(modifierType), -1, nullptr);
+            ASSERT_NE(modifier, nullptr);
+            app_view_models::applyModifierDefaults(modifier.get());
+            // full depth, so knobs swing over their whole range
+            for (auto mp : modifier->getAutomatableParameters())
+                if (mp->paramID.containsIgnoreCase("depth"))
+                    mp->setParameter(mp->valueRange.end, juce::sendNotificationSync);
+            p->addModifier(*modifier);
+            attached++;
+        }
+        h.loop(0.0, 4.0);
+        h.play();
+        auto peaks = h.run(4.0);
+        EXPECT_FALSE(h.nonFinite) << c.type << " made NaN with " << modifierType.toString();
+        EXPECT_LT(PlaybackHarness::maxOf(peaks, 0, peaks.size()), 16.0f);
+        h.stop();
+        h.edit->editFileRetriever = [file] { return file; };
+        ASSERT_TRUE(
+            tracktion::EditFileOperations(*h.edit).save(false, true, false));
+
+        // delete the plugin while playing, modifiers still attached
+        h.play();
+        h.run(0.3);
+        plugin->deleteFromParent();
+        h.pump(50);
+        h.run(0.5);
+        EXPECT_FALSE(h.nonFinite);
+        // and the modifiers too
+        for (auto m : track.getModifierList().getModifiers())
+            m->remove();
+        h.pump(50);
+        h.run(0.3);
+    }
+    PlaybackHarness h2;
+    auto loaded = tracktion::loadEditFromFile(h2.engine, file);
+    ASSERT_NE(loaded, nullptr);
+    int found = 0;
+    for (auto t : tracktion::getAudioTracks(*loaded))
+        for (auto p : t->pluginList)
+            if (p->getPluginType() == juce::String(c.type))
+                for (auto param : p->getAutomatableParameters())
+                    found += param->getModifiers().size();
+    EXPECT_EQ(found, attached) << c.type << ": modifiers lost after reload";
+    loaded.reset();
+    file.deleteFile();
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    All, ModifierTest,
+    ::testing::Combine(::testing::Range(0, int(std::size(stressCases))),
+                       ::testing::Range(0, int(std::size(modifierTypes)))),
+    [](const ::testing::TestParamInfo<std::tuple<int, int>> &info) {
+        return std::string(stressCases[std::get<0>(info.param)].type) + "_" +
+               modifierTypes[std::get<1>(info.param)];
+    });
+
+//==============================================================================
+// Changing the sample rate and buffer size while the song plays, the way the
+// Settings screen does: every plugin must keep playing, in tune and in time,
+// without reading past buffers sized for the old settings.
+class DeviceSwitchTest : public ::testing::TestWithParam<int> {};
+
+TEST_P(DeviceSwitchTest, keepsPlayingAcrossRateAndBufferChanges) {
+    auto c = stressCases[GetParam()];
+    PlaybackHarness h(44100.0, 256);
+    auto plugin = h.add(c.type);
+    if (!c.isInstrument)
+        h.add(PulseEnginePlugin::xmlTypeName);
+    if (auto rep = dynamic_cast<BeatRepeatPlugin *>(plugin))
+        rep->setActive(true);
+    h.addNotes({{{48, 0.0, 0.5}}, {{60, 0.5, 1.0}}, {{64, 0.5, 1.0}},
+                {{55, 1.5, 0.5}}, {{54, 0.0, 2.0}}, {{57, 1.0, 1.0}}},
+               2.0);
+    h.loop(0.0, 2.0);
+    h.play();
+    h.run(1.0);
+    const std::pair<double, int> configs[] = {
+        {96000.0, 1024}, {22050.0, 64}, {48000.0, 17}, {192000.0, 512},
+        {44100.0, 2048}, {8000.0, 32},  {48000.0, 256}};
+    for (auto [rate, block] : configs) {
+        h.switchDevice(rate, block);
+        auto peaks = h.run(1.2);
+        EXPECT_FALSE(h.nonFinite) << c.type << " at " << rate << "/" << block;
+        EXPECT_LT(PlaybackHarness::maxOf(peaks, 0, peaks.size()), 16.0f)
+            << c.type << " at " << rate << "/" << block;
+        if (juce::String(c.type) != DuckerPlugin::xmlTypeName)
+            EXPECT_GT(PlaybackHarness::maxOf(peaks, 4, peaks.size()), 1.0e-4f)
+                << c.type << " went silent at " << rate << "/" << block;
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    All, DeviceSwitchTest, ::testing::Range(0, int(std::size(stressCases))),
+    [](const ::testing::TestParamInfo<int> &info) {
+        return std::string(stressCases[info.param].type);
+    });
+
+// Every plugin in a WAV render (Control + Save) sounds like it does when the
+// song plays: not silent, no NaN, about as loud. Tempo-synced effects (Beat
+// Repeat, Ducker, Note Repeat, Finger...) must follow the song in a render
+// too, where no one presses Play.
+class RenderEveryPluginTest : public ::testing::TestWithParam<int> {};
+
+TEST_P(RenderEveryPluginTest, renderSoundsLikePlayback) {
+    auto c = stressCases[GetParam()];
+    PlaybackHarness h;
+    auto plugin = h.add(c.type);
+    if (!c.isInstrument)
+        h.add(PulseEnginePlugin::xmlTypeName);
+    if (auto rep = dynamic_cast<BeatRepeatPlugin *>(plugin))
+        rep->setActive(true);
+    h.addNotes({{{48, 0.0, 1.0}}, {{60, 0.0, 4.0}}, {{64, 1.0, 3.0}},
+                {{54, 0.0, 4.0}}, {{57, 2.0, 2.0}}, {{67, 3.0, 1.0}}},
+               4.0);
+    // live first
+    h.play();
+    auto live = h.run(2.0);
+    h.stop();
+    h.run(0.3);
+
+    auto file = juce::File::createTempFile(".wav");
+    juce::BigInteger tracks;
+    tracks.setBit(0);
+    ASSERT_TRUE(tracktion::Renderer::renderToFile(
+        "Render", file, *h.edit,
+        tracktion::TimeRange(tracktion::TimePosition(),
+                             tracktion::TimePosition::fromSeconds(2.0)),
+        tracks, true, {}, false));
+    juce::AudioFormatManager formats;
+    formats.registerBasicFormats();
+    std::unique_ptr<juce::AudioFormatReader> reader(formats.createReaderFor(file));
+    ASSERT_NE(reader, nullptr);
+    juce::AudioBuffer<float> audio(int(reader->numChannels),
+                                   int(reader->lengthInSamples));
+    reader->read(&audio, 0, audio.getNumSamples(), 0, true, true);
+    reader.reset();
+    file.deleteFile();
+
+    const int slice = 2205; // 50 ms at 44.1 kHz, like the live peaks
+    std::vector<float> rendered;
+    bool finite = true;
+    for (int start = 0; start + slice <= audio.getNumSamples(); start += slice) {
+        float peak = 0.0f;
+        for (int ch = 0; ch < audio.getNumChannels(); ch++)
+            for (int i = start; i < start + slice; i++) {
+                float v = audio.getSample(ch, i);
+                finite = finite && std::isfinite(v);
+                peak = juce::jmax(peak, std::abs(v));
+            }
+        rendered.push_back(peak);
+    }
+    auto mean = [](const std::vector<float> &v) {
+        double sum = 0;
+        for (auto x : v)
+            sum += x;
+        return v.empty() ? 0.0 : sum / double(v.size());
+    };
+    const double liveMean = mean(live), renderMean = mean(rendered);
+    EXPECT_TRUE(finite) << c.type;
+    EXPECT_GT(renderMean, 1.0e-4) << c.type << " is silent in the render";
+    EXPECT_GT(liveMean, 1.0e-4) << c.type << " is silent live";
+    EXPECT_LT(renderMean, liveMean * 3.0 + 1.0e-3)
+        << c.type << ": render much louder than playback";
+    EXPECT_GT(renderMean, liveMean / 3.0)
+        << c.type << ": render much quieter than playback (live " << liveMean
+        << ", render " << renderMean << ")";
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    All, RenderEveryPluginTest, ::testing::Range(0, int(std::size(stressCases))),
+    [](const ::testing::TestParamInfo<int> &info) {
+        return std::string(stressCases[info.param].type);
+    });
+
+//==============================================================================
+// Random editing, the way the screens do it, mixed with random undos, some
+// while the song plays: add and delete tracks and plugins, move and bypass
+// plugins, add modifiers, cut, paste, slice, join, quantize, run sequencers.
+// Nothing may crash, and the audio must stay finite.
+class UndoFuzzTest : public ::testing::TestWithParam<int> {};
+
+TEST_P(UndoFuzzTest, randomEditsAndUndos) {
+    const int seed = GetParam();
+    PlaybackHarness h;
+    app_services::TimelineCamera camera(7.0);
+    app_view_models::TracksListViewModel tracks(*h.edit, camera);
+    auto settle = [&] {
+        tracks.handleUpdateNowIfNeeded();
+        tracks.listViewModel.handleUpdateNowIfNeeded();
+        tracks.listViewModel.itemListState.handleUpdateNowIfNeeded();
+        h.pump(5);
+    };
+    settle();
+    h.edit->ensureNumberOfAudioTracks(3);
+    h.addNotes({{{60, 0.0, 1.0}}, {{64, 1.0, 1.0}}, {{54, 0.0, 4.0}}}, 8.0, 0);
+    settle();
+    juce::Random random(seed);
+    auto selectedTrack = [&]() -> tracktion::AudioTrack * {
+        return dynamic_cast<tracktion::AudioTrack *>(
+            tracks.listViewModel.getSelectedItem());
+    };
+    std::vector<std::string> log;
+    for (int step = 0; step < 250; step++) {
+        int op = random.nextInt(22);
+        log.push_back(std::to_string(op));
+        h.edit->getUndoManager().beginNewTransaction();
+        auto track = selectedTrack();
+        switch (op) {
+        case 0:
+            tracks.addTrack();
+            break;
+        case 1:
+            if (tracktion::getAudioTracks(*h.edit).size() > 1)
+                tracks.deleteSelectedTrack();
+            break;
+        case 2:
+        case 3: {
+            int n = tracks.listViewModel.itemListState.listSize;
+            if (n > 0)
+                tracks.listViewModel.itemListState.setSelectedItemIndex(
+                    random.nextInt(n));
+            break;
+        }
+        case 4:
+            tracks.cutSelectedTracksClipAtPlayHead();
+            break;
+        case 5:
+            tracks.pasteClipboardContentToTrackAtPlayhead();
+            break;
+        case 6:
+            tracks.splitSelectedTracksClipAtPlayHead();
+            break;
+        case 7:
+            tracks.mergeSelectedTracksClipsAtPlayhead();
+            break;
+        case 8:
+            tracks.quantizeSelectedTracksClipAtPlayhead();
+            break;
+        case 9:
+            for (int k = random.nextInt(8); k-- > 0;)
+                random.nextBool() ? tracks.nudgeTransportForwardToNearestBeat()
+                                  : tracks.nudgeTransportBackwardToNearestBeat();
+            break;
+        case 10:
+        case 11:
+            if (track != nullptr) {
+                app_view_models::AvailablePluginsViewModel available(track);
+                available.setSelectedCategoryIndex(random.nextInt(3));
+                auto names = available.getPluginNames();
+                if (names.size() > 0) {
+                    available.setSelectedPluginIndex(random.nextInt(names.size()));
+                    available.addSelectedPluginToTrack();
+                }
+            }
+            break;
+        case 12:
+        case 13:
+            if (track != nullptr) {
+                app_view_models::TrackPluginsListViewModel list(track);
+                int n = list.listViewModel.itemListState.listSize;
+                if (n > 0)
+                    list.listViewModel.itemListState.setSelectedItemIndex(
+                        random.nextInt(n));
+                switch (random.nextInt(4)) {
+                case 0:
+                    list.deleteSelectedPlugin();
+                    break;
+                case 1:
+                    list.moveSelectedPluginUp();
+                    break;
+                case 2:
+                    list.moveSelectedPluginDown();
+                    break;
+                default:
+                    list.toggleSelectedPluginEnabled();
+                }
+            }
+            break;
+        case 14:
+            if (track != nullptr) {
+                // a modifier on a random knob of a random plugin
+                juce::Array<tracktion::Plugin *> plugins;
+                for (auto p : track->pluginList)
+                    if (!p->getAutomatableParameters().isEmpty())
+                        plugins.add(p);
+                if (!plugins.isEmpty()) {
+                    auto plugin = plugins[random.nextInt(plugins.size())];
+                    auto params = plugin->getAutomatableParameters();
+                    auto param = params[random.nextInt(params.size())];
+                    const juce::Identifier types[] = {
+                        "LFO", "STEP", "RANDOM", "ENVELOPEFOLLOWER", "MIDITRACKER"};
+                    auto m = track->getModifierList().insertModifier(
+                        juce::ValueTree(types[random.nextInt(5)]), -1,
+                        nullptr);
+                    if (m != nullptr) {
+                        app_view_models::applyModifierDefaults(m.get());
+                        param->addModifier(*m);
+                    }
+                }
+            }
+            break;
+        case 15:
+            if (track != nullptr) {
+                app_view_models::StepSequencerViewModel stepVm(track);
+                for (int k = 0; k < 4; k++) {
+                    for (int n = random.nextInt(5); n-- > 0;)
+                        stepVm.incrementSelectedNoteIndex();
+                    stepVm.toggleNoteNumberAtSelectedIndex(53 + random.nextInt(24));
+                }
+                stepVm.nudgeRatchet(random.nextInt(3) - 1);
+                stepVm.nudgeSwing(random.nextInt(21) - 10);
+                if (random.nextBool())
+                    stepVm.incrementNumberOfNotes();
+            }
+            break;
+        case 16:
+            if (track != nullptr) {
+                app_view_models::EuclideanSequencerViewModel e(track);
+                e.selectForNote(53 + random.nextInt(8));
+                e.nudgeHits(random.nextInt(9) - 2);
+                e.nudgeSteps(random.nextInt(9) - 4);
+            }
+            break;
+        case 17:
+            tracks.toggleMute();
+            break;
+        case 18:
+            if (h.edit->getTransport().isPlaying())
+                h.stop();
+            else
+                h.play();
+            break;
+        case 19:
+        case 20:
+        case 21:
+            for (int k = 1 + random.nextInt(3); k-- > 0;)
+                tracks.undo();
+            break;
+        }
+        settle();
+        h.run(0.03);
+        if (std::getenv("LMN3_DEBUG") && step % 50 == 49) {
+            int plugins = 0, clips = 0, modifiers = 0;
+            for (auto t : tracktion::getAudioTracks(*h.edit)) {
+                plugins += t->pluginList.size();
+                clips += t->getClips().size();
+                modifiers += t->getModifierList().getModifiers().size();
+            }
+            std::cout << "step " << step << ": tracks "
+                      << tracktion::getAudioTracks(*h.edit).size() << " plugins "
+                      << plugins << " clips " << clips << " modifiers "
+                      << modifiers << "\n";
+        }
+        ASSERT_FALSE(h.nonFinite) << "after ops " << [&] {
+            std::string t;
+            for (auto &l : log)
+                t += l + " ";
+            return t;
+        }();
+    }
+    // and undo everything that's left
+    for (int k = 0; k < 600 && h.edit->getUndoManager().canUndo(); k++) {
+        tracks.undo();
+        if (k % 20 == 0) {
+            settle();
+            h.run(0.02);
+        }
+    }
+    settle();
+    h.run(0.1);
+    EXPECT_FALSE(h.nonFinite);
+}
+
+INSTANTIATE_TEST_SUITE_P(Seeds, UndoFuzzTest, ::testing::Range(1, 9));
+
+//==============================================================================
+// A real project with every plugin, sequencer and modifier, damaged at
+// random (junk values, settings missing, unknown plugin types, parts deleted
+// or doubled, as an old or newer build, a bad copy or a hand edit might
+// leave it), then opened and played. Nothing may crash.
+namespace {
+void damage(juce::ValueTree v, juce::Random &r, int &budget) {
+    if (budget <= 0)
+        return;
+    for (int i = 0; i < v.getNumProperties() && budget > 0; i++) {
+        if (r.nextInt(25) != 0)
+            continue;
+        budget--;
+        auto name = v.getPropertyName(i);
+        switch (r.nextInt(7)) {
+        case 0:
+            v.removeProperty(name, nullptr);
+            break;
+        case 1:
+            v.setProperty(name, "junk", nullptr);
+            break;
+        case 2:
+            v.setProperty(name, -1.0e9, nullptr);
+            break;
+        case 3:
+            v.setProperty(name, 1.0e9, nullptr);
+            break;
+        case 4:
+            v.setProperty(name, "", nullptr);
+            break;
+        case 5:
+            v.setProperty(name, "nan", nullptr);
+            break;
+        default:
+            v.setProperty(name, r.nextInt(200) - 100, nullptr);
+        }
+    }
+    for (int i = v.getNumChildren(); --i >= 0 && budget > 0;) {
+        auto child = v.getChild(i);
+        int roll = r.nextInt(60);
+        if (roll == 0) {
+            v.removeChild(i, nullptr);
+            budget--;
+        } else if (roll == 1) {
+            v.addChild(child.createCopy(), i, nullptr);
+            budget--;
+        } else if (roll == 2 && child.hasType(tracktion::IDs::PLUGIN)) {
+            child.setProperty(tracktion::IDs::type, "lmn3FromTheFuture", nullptr);
+            budget--;
+        } else {
+            damage(child, r, budget);
+        }
+    }
+}
+} // namespace
+
+class DamagedContentTest : public ::testing::TestWithParam<int> {};
+
+TEST_P(DamagedContentTest, opensAndPlays) {
+    static juce::File source = [] {
+        auto file = juce::File::createTempFile(".tracktionedit");
+        PlaybackHarness h;
+        int t = 0;
+        for (auto &c : stressCases) {
+            auto plugin = h.add(c.type, t % 6);
+            auto params = plugin->getAutomatableParameters();
+            if (!params.isEmpty()) {
+                auto m = h.track(t % 6).getModifierList().insertModifier(
+                    juce::ValueTree(modifierTypes[t % 5]), -1, nullptr);
+                app_view_models::applyModifierDefaults(m.get());
+                params[0]->addModifier(*m);
+            }
+            t++;
+        }
+        h.addNotes({{{60, 0.0, 1.0}}, {{54, 0.0, 4.0}}}, 4.0, 0);
+        auto t1 = tracktion::getAudioTracks(*h.edit)[1];
+        {
+            app_view_models::EuclideanSequencerViewModel e(t1);
+            e.selectForNote(55);
+            e.nudgeHits(3);
+        }
+        {
+            app_view_models::StepSequencerViewModel st(tracktion::getAudioTracks(*h.edit)[2]);
+            st.toggleNoteNumberAtSelectedIndex(60);
+        }
+        {
+            app_view_models::TuringSequencerViewModel tu(tracktion::getAudioTracks(*h.edit)[3]);
+            tu.reroll();
+        }
+        h.edit->editFileRetriever = [file] { return file; };
+        tracktion::EditFileOperations(*h.edit).save(false, true, false);
+        return file;
+    }();
+    ASSERT_TRUE(source.existsAsFile());
+    auto xml = juce::parseXML(source);
+    ASSERT_NE(xml, nullptr);
+    auto state = juce::ValueTree::fromXml(*xml);
+    juce::Random r(GetParam());
+    int budget = 5 + r.nextInt(30);
+    damage(state, r, budget);
+    auto file = juce::File::createTempFile(".tracktionedit");
+    if (auto out = state.createXml())
+        out->writeTo(file);
+
+    PlaybackHarness h;
+    h.edit.reset();
+    h.edit = app_services::loadProject(h.engine, file);
+    ASSERT_NE(h.edit, nullptr);
+    h.edit->getTransport().ensureContextAllocated();
+    h.pump();
+    // the screens read the tracks and sequencers
+    for (auto track : tracktion::getAudioTracks(*h.edit)) {
+        app_view_models::TrackPluginsListViewModel list(track);
+        app_view_models::EuclideanSequencerViewModel e(track);
+        app_view_models::TuringSequencerViewModel tu(track);
+        app_view_models::ChordsSequencerViewModel ch(track);
+        app_view_models::StepSequencerViewModel st(track);
+    }
+    h.play();
+    h.run(1.0);
+    h.stop();
+    h.run(0.1);
+    EXPECT_FALSE(h.nonFinite) << "seed " << GetParam();
+    h.edit.reset();
+    file.deleteFile();
+}
+
+// (600 seeds were run once; these 40 plus the ones that found the clip and
+// modifier crashes stay in the suite)
+static std::vector<int> damagedContentSeeds() {
+    std::vector<int> seeds;
+    for (int i = 1; i <= 40; i++)
+        seeds.push_back(i);
+    for (int i : {90, 218, 290})
+        seeds.push_back(i);
+    return seeds;
+}
+INSTANTIATE_TEST_SUITE_P(Seeds, DamagedContentTest,
+                         ::testing::ValuesIn(damagedContentSeeds()));
+
+//==============================================================================
 // Save and reload: every plugin keeps every knob, and the sequencers keep
 // their settings
 class SaveReloadTest : public ::testing::TestWithParam<int> {};
@@ -872,4 +1434,5 @@ INSTANTIATE_TEST_SUITE_P(
     });
 
 } // namespace AppViewModelsTests
+
 

@@ -11,8 +11,14 @@ namespace app_services {
 //    again. Such a plugin is recognised by its other settings, gets its type
 //    back, and its TYPE knob keeps the value it had. (No other plugin's
 //    type was ever stored as a number.)
+//
+// A file that can't be read at all (empty, cut off by a crash or a power
+// cut, or not a project) opens as a new, empty song instead of crashing.
+// The damaged file is kept next to it as "<name> (damaged).tracktionedit.bak"
+// so nothing is lost. startedEmpty (if given) says whether that happened.
 std::unique_ptr<tracktion::Edit> loadProject(tracktion::Engine &engine,
-                                             const juce::File &file);
+                                             const juce::File &file,
+                                             bool *startedEmpty = nullptr);
 
 // The mending on its own: returns how many plugins were mended
 int repairProjectState(juce::ValueTree &editState);
