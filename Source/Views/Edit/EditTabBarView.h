@@ -2,6 +2,7 @@
 #include "LiveControls.h"
 #include "MessageBox.h"
 #include "OctaveDisplayComponent.h"
+#include "HelpOverlay.h"
 #include "PowerOffOverlay.h"
 #include "RenderMenuComponent.h"
 #include "SampleOverlay.h"
@@ -42,6 +43,10 @@ class EditTabBarView : public juce::TabbedComponent,
     void powerOffHoldStarted() override;
     void powerOffHoldCancelled() override;
 
+    // Control + Play: a card explaining the screen that's showing
+    void helpButtonPressed() override;
+    void helpClosed() override;
+
     // Used to reset the modifiers list when ever a plugin gets deleted
     void resetModifiersTab();
 
@@ -69,6 +74,7 @@ class EditTabBarView : public juce::TabbedComponent,
     MessageBox messageBox;
     RenderMenuComponent renderMenu;
     PowerOffOverlay powerOffOverlay;
+    HelpOverlay helpOverlay;
 
     // joystick click, MIC key (LMN-3 v3) and the sampling screen
     std::unique_ptr<LiveControls> liveControls;

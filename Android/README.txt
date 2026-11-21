@@ -20,6 +20,9 @@ Playing
                   or keep a finger still on it to hold it down (Beat
                   Repeat's stutter)
   Ctrl            tap to turn it on, tap again to turn it off
+  Help            Ctrl, then Play: a card explaining the screen you're
+                  on; tap anything to close it (and tap Ctrl again to
+                  turn it off)
   Big screen      hides the keys so the screen fills the height
                   (the same button, now called Keys, brings them back)
   Several fingers work at once: chords, or holding + while tapping a key.

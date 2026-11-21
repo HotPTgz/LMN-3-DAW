@@ -613,7 +613,7 @@ createPlayfulPluginView(tracktion::Plugin *plugin,
             return String(v->getIsLowPass() ? "LOW-PASS" : "HIGH-PASS");
         };
         mode.nudge = [v](int direction) { v->setIsLowPass(direction < 0); };
-        return screen(mcm, "Filter", {frequency, mode},
+        return screen(mcm, "LPF/HPF", {frequency, mode},
                       S::filter([v] { return float(v->getFrequency()); },
                                 [v] { return v->getIsLowPass(); }),
                       vm);

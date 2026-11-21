@@ -132,6 +132,8 @@ The same app runs without the LMN-3 hardware, to try it out or sketch ideas away
 
 The four boxes along the bottom of most screens always match the LMN-3's four encoders, left to right. Hold **Control** for a screen's second set of controls ("ctrl: more" in the top right means there is one).
 
+**Help on every screen:** press **Control + Play** and a card explains the screen you're on: what it's for, what each encoder and button does there, and a tip. Any button, encoder or key closes it (and does nothing else). On a computer it's **Shift + Space**; on the phone, tap **Ctrl** and then **Play** (and tap **Ctrl** again afterwards to turn it off).
+
 ### Look and feel
 
 Every screen is redrawn in a "playful" style: a dark purple background, rounded cards, and a small animated character for each instrument, effect, modulator and sequencer that reacts as you play. The original's plain lists and knobs are gone.

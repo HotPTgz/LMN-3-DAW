@@ -181,3 +181,13 @@ void PlayfulParamScreen::paintStage(juce::Graphics &g, double time) {
 bool PlayfulParamScreen::stageShowsStars() {
     return scene == nullptr || scene->showsStars();
 }
+
+std::array<juce::String, 8> PlayfulParamScreen::getPageLabels() const {
+    std::array<juce::String, 8> labels;
+    for (int i = 0; i < 8; i++) {
+        size_t index = size_t(page * 8 + i);
+        if (index < params.size() && params[index].isEnabled())
+            labels[size_t(i)] = params[index].label;
+    }
+    return labels;
+}

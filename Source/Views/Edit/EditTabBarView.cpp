@@ -84,6 +84,8 @@ EditTabBarView::EditTabBarView(tracktion::Edit &e,
     addChildComponent(*sampleOverlay);
     sampleOverlay->setAlwaysOnTop(true);
     liveControls->onStateChanged = [this]() { sampleOverlay->update(); };
+    addChildComponent(helpOverlay);
+    helpOverlay.setAlwaysOnTop(true);
 
     midiCommandManager.addListener(this);
     viewModel.addListener(this);
@@ -133,7 +135,15 @@ void EditTabBarView::resized() {
     powerOffOverlay.setBounds(getLocalBounds());
     if (sampleOverlay != nullptr)
         sampleOverlay->setBounds(getLocalBounds());
+    helpOverlay.setBounds(getLocalBounds());
 }
+
+void EditTabBarView::helpButtonPressed() {
+    helpOverlay.show(helpCardFor(midiCommandManager.getFocusedComponent()));
+    midiCommandManager.isHelpOpen = true;
+}
+
+void EditTabBarView::helpClosed() { helpOverlay.hide(); }
 
 void EditTabBarView::showMessage(const juce::String &message, int durationMs) {
     messageBox.setMessage(message);

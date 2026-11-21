@@ -38,6 +38,7 @@ target_sources(Tests PRIVATE
         app_view_models/Utilities/QuantizerTest.cpp
         app_view_models/Utilities/RenderPlannerTest.cpp
         app_services/ProjectManagerTest.cpp
+        app_services/HelpButtonTest.cpp
         app_view_models/Utilities/MidiFxTest.cpp
         app_view_models/Utilities/MoreMidiFxTest.cpp
         app_view_models/Utilities/FxDspTest.cpp
