@@ -88,6 +88,12 @@ class StrumEngine {
     MidiScheduler scheduler;
     double now = 0.0;
     bool nextDown = false;
+    // the strum being played: when its first note came, how many notes
+    // it has so far, and which way it goes
+    static constexpr double groupWindow = 0.05;
+    double groupStart = -1.0e9;
+    int groupCount = 0;
+    bool groupDown = false;
 };
 
 //==============================================================================

@@ -107,6 +107,26 @@ TEST(ResonantFilterTest, lowPassCutsHighs) {
     EXPECT_GT(rms(low, 4800), 0.25f);
 }
 
+// Fully open with no resonance, a loud sound comes through untouched (it
+// used to be squashed and distorted on the way)
+TEST(ResonantFilterTest, openFilterLeavesLoudSoundAlone) {
+    ResonantFilter f;
+    f.prepare(sr);
+    ResonantFilter::Settings s;
+    s.cutoffHz = 20000;
+    s.resonance = 0.0f;
+    s.envelope = 0.0f;
+    s.type = ResonantFilter::lowPass12;
+    BlockTime time;
+    time.sampleRate = sr;
+    auto in = sine(200, 9600);
+    for (auto &x : in)
+        x *= 0.7f / 0.5f; // a peak of 0.7
+    auto l = in, r = in;
+    f.process(l.data(), r.data(), 9600, time, s);
+    EXPECT_NEAR(rms(l, 4800), rms(in, 4800), rms(in, 4800) * 0.03f);
+}
+
 TEST(ResonantFilterTest, highPassCutsLows) {
     ResonantFilter f;
     f.prepare(sr);

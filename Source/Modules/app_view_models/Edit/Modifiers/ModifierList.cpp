@@ -17,14 +17,11 @@ juce::Array<ModifierList::ModifierListItem>
 ModifierList::getModifierListItems() {
     juce::Array<ModifierList::ModifierListItem> modifiers;
 
-    tracktion::LFOModifier lfoModifier(edit,
-                                       juce::ValueTree(tracktion::IDs::LFO));
-
-    ModifierListItem lfoItem(tracktion::IDs::LFO, lfoModifier.getName());
-    modifiers.add(lfoItem);
-
     // Display names are fixed rather than read from temporary modifier
-    // instances, since some modifiers start timers when constructed
+    // instances: some modifiers start timers when constructed, and a
+    // temporary LFO that was never initialised dereferences a null timer
+    // in its destructor
+    modifiers.add(ModifierListItem(tracktion::IDs::LFO, "LFO Modifier"));
     modifiers.add(ModifierListItem(tracktion::IDs::STEP, "Step"));
     modifiers.add(ModifierListItem(tracktion::IDs::RANDOM, "Random"));
     modifiers.add(

@@ -777,10 +777,10 @@ createPlayfulPluginView(tracktion::Plugin *plugin,
             mcm, "Drive", paramsFrom(vm.get()),
             S::drive([drive] { return drive->get("drive"); },
                      [drive] { return drive->get("tone"); },
-                     [drive] { return drive->getChoice("type"); },
+                     [drive] { return drive->getChoice("driveType"); },
                      [drive] {
                          return fx::Drive::getTypeNames()[drive->getChoice(
-                             "type")];
+                             "driveType")];
                      },
                      [drive] { return drive->get("mix"); },
                      [](float x, int type) { return fx::Drive::shape(x, type); }),
@@ -804,7 +804,7 @@ createPlayfulPluginView(tracktion::Plugin *plugin,
                 [filt] { return filt->get("resonance"); },
                 [filt] { return filt->get("envelope"); },
                 [filt] { return filt->get("lfo"); },
-                [filt] { return filt->getChoice("type"); },
+                [filt] { return filt->getChoice("filterType"); },
                 fx::ResonantFilter::getTypeNames(),
                 [filt] {
                     return ResonantFilterPlugin::getLfoRateNames()

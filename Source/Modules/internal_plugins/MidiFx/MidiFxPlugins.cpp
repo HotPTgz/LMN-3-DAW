@@ -78,9 +78,12 @@ ArpeggiatorPlugin::ArpeggiatorPlugin(tracktion::PluginCreationInfo info)
 }
 
 ArpeggiatorPlugin::~ArpeggiatorPlugin() {
-    notifyListenersOfDeletion();
+    // detach first: telling listeners about the deletion empties the
+    // parameter list, and parameters still attached would later touch
+    // values that are already gone
     for (auto p : getAutomatableParameters())
         p->detachFromCurrentValue();
+    notifyListenersOfDeletion();
 }
 
 void ArpeggiatorPlugin::initialise(
@@ -134,9 +137,12 @@ ScaleLockPlugin::ScaleLockPlugin(tracktion::PluginCreationInfo info)
 }
 
 ScaleLockPlugin::~ScaleLockPlugin() {
-    notifyListenersOfDeletion();
+    // detach first: telling listeners about the deletion empties the
+    // parameter list, and parameters still attached would later touch
+    // values that are already gone
     for (auto p : getAutomatableParameters())
         p->detachFromCurrentValue();
+    notifyListenersOfDeletion();
 }
 
 void ScaleLockPlugin::applyToBuffer(const tracktion::PluginRenderContext &fc) {
@@ -185,9 +191,12 @@ ChordPlugin::ChordPlugin(tracktion::PluginCreationInfo info)
 }
 
 ChordPlugin::~ChordPlugin() {
-    notifyListenersOfDeletion();
+    // detach first: telling listeners about the deletion empties the
+    // parameter list, and parameters still attached would later touch
+    // values that are already gone
     for (auto p : getAutomatableParameters())
         p->detachFromCurrentValue();
+    notifyListenersOfDeletion();
 }
 
 void ChordPlugin::applyToBuffer(const tracktion::PluginRenderContext &fc) {

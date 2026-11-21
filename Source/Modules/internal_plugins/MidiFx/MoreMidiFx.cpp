@@ -235,22 +235,34 @@ void StrumEngine::process(tracktion::MidiMessageArray &midi,
         while (j < notes.size() && notes[j].isNoteOn() &&
                notes[j].getTimeStamp() - m.getTimeStamp() < 0.005)
             chord.push_back(notes[j++]);
-        bool down = settings.direction == 1;
-        if (settings.alternate) {
-            down = nextDown;
-            nextDown = !nextDown;
+        // Fingers never land on a chord's keys at exactly the same moment:
+        // notes within a short time of the chord's first one (even in a later
+        // block) belong to the same strum and take the next places in it
+        const bool sameStrum = groupCount > 0 && time - groupStart < groupWindow;
+        if (!sameStrum) {
+            groupStart = time;
+            groupCount = 0;
+            groupDown = settings.direction == 1;
+            if (settings.alternate) {
+                groupDown = nextDown;
+                nextDown = !nextDown;
+            }
         }
+        const bool down = groupDown;
         std::sort(chord.begin(), chord.end(),
                   [down](const juce::MidiMessage &a,
                          const juce::MidiMessage &b) {
                       return down ? a.getNoteNumber() > b.getNoteNumber()
                                   : a.getNoteNumber() < b.getNoteNumber();
                   });
-        int n = int(chord.size());
-        for (int k = 0; k < n; k++)
-            scheduler.add(time + Strum::offset(k, n, settings.seconds,
-                                               settings.curve),
-                          chord[size_t(k)]);
+        int n = groupCount + int(chord.size());
+        for (int k = 0; k < int(chord.size()); k++) {
+            double at = groupStart + Strum::offset(groupCount + k, n,
+                                                   settings.seconds,
+                                                   settings.curve);
+            scheduler.add(juce::jmax(time, at), chord[size_t(k)]);
+        }
+        groupCount = n;
         i = j;
     }
 
@@ -569,9 +581,12 @@ NoteRepeatPlugin::NoteRepeatPlugin(tracktion::PluginCreationInfo info)
 }
 
 NoteRepeatPlugin::~NoteRepeatPlugin() {
-    notifyListenersOfDeletion();
+    // detach first: telling listeners about the deletion empties the
+    // parameter list, and parameters still attached would later touch
+    // values that are already gone
     for (auto p : getAutomatableParameters())
         p->detachFromCurrentValue();
+    notifyListenersOfDeletion();
 }
 
 void NoteRepeatPlugin::initialise(const tracktion::PluginInitialisationInfo &) {
@@ -611,9 +626,12 @@ StrumPlugin::StrumPlugin(tracktion::PluginCreationInfo info)
 }
 
 StrumPlugin::~StrumPlugin() {
-    notifyListenersOfDeletion();
+    // detach first: telling listeners about the deletion empties the
+    // parameter list, and parameters still attached would later touch
+    // values that are already gone
     for (auto p : getAutomatableParameters())
         p->detachFromCurrentValue();
+    notifyListenersOfDeletion();
 }
 
 void StrumPlugin::applyToBuffer(const tracktion::PluginRenderContext &fc) {
@@ -656,9 +674,12 @@ HumanisePlugin::HumanisePlugin(tracktion::PluginCreationInfo info)
 }
 
 HumanisePlugin::~HumanisePlugin() {
-    notifyListenersOfDeletion();
+    // detach first: telling listeners about the deletion empties the
+    // parameter list, and parameters still attached would later touch
+    // values that are already gone
     for (auto p : getAutomatableParameters())
         p->detachFromCurrentValue();
+    notifyListenersOfDeletion();
 }
 
 void HumanisePlugin::applyToBuffer(const tracktion::PluginRenderContext &fc) {
@@ -694,9 +715,12 @@ MidiEchoPlugin::MidiEchoPlugin(tracktion::PluginCreationInfo info)
 }
 
 MidiEchoPlugin::~MidiEchoPlugin() {
-    notifyListenersOfDeletion();
+    // detach first: telling listeners about the deletion empties the
+    // parameter list, and parameters still attached would later touch
+    // values that are already gone
     for (auto p : getAutomatableParameters())
         p->detachFromCurrentValue();
+    notifyListenersOfDeletion();
 }
 
 void MidiEchoPlugin::applyToBuffer(const tracktion::PluginRenderContext &fc) {
@@ -742,9 +766,12 @@ FingerPlugin::FingerPlugin(tracktion::PluginCreationInfo info)
 
 FingerPlugin::~FingerPlugin() {
     kitWatcher.reset();
-    notifyListenersOfDeletion();
+    // detach first: telling listeners about the deletion empties the
+    // parameter list, and parameters still attached would later touch
+    // values that are already gone
     for (auto p : getAutomatableParameters())
         p->detachFromCurrentValue();
+    notifyListenersOfDeletion();
 }
 
 tracktion::AutomatableParameter *FingerPlugin::getSlotParameter(int slot,
