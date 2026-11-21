@@ -47,6 +47,9 @@ class PlayfulScreen : public juce::Component, private juce::Timer {
 
     void paint(juce::Graphics &g) override;
 
+    // the title shown at the top (used by the help card)
+    juce::String getScreenTitle() { return getTitle(); }
+
   protected:
     virtual juce::String getTitle() = 0;
     virtual juce::String getSubtitle() { return {}; }
@@ -113,6 +116,11 @@ class PlayfulParamScreen : public PlayfulScreen,
     int getPage() const { return page; }
     void setPage(int newPage);
     int getNumPages() const;
+
+    // the plugin or modifier name the screen was made with
+    const juce::String &getBaseTitle() const { return title; }
+    // the knob labels on the current page: encoder 1-4, then with Control
+    std::array<juce::String, 8> getPageLabels() const;
 
   protected:
     juce::String getTitle() override;

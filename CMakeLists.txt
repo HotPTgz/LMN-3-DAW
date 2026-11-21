@@ -95,6 +95,8 @@ target_sources(LMN-3  PRIVATE
     Source/Views/Playful/PlayfulApp.cpp
     Source/Views/Playful/PlayfulVst3Screen.cpp
     Source/Views/Edit/PowerOffOverlay.cpp
+    Source/Views/Edit/HelpOverlay.cpp
+    Source/Views/Edit/HelpCards.cpp
     Source/Views/Edit/Tracks/InformationPanelComponent.cpp
     Source/Views/Edit/Tracks/Markers/PlayheadComponent.cpp
     Source/Views/Edit/Tracks/Markers/LoopMarkerComponent.cpp

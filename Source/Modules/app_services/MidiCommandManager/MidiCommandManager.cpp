@@ -31,6 +31,43 @@ MidiCommandManager::~MidiCommandManager() {
     }
 }
 
+bool MidiCommandManager::handledByHelp(const juce::MidiMessage &message) {
+    if (message.isController()) {
+        const int number = message.getControllerNumber();
+        const int value = message.getControllerValue();
+        // Control keeps working (so screens know when it's let go)
+        if (number == CONTROL_BUTTON)
+            return false;
+        // the release of the button that closed (or opened) the card
+        if (number == swallowedController && value == 0) {
+            swallowedController = -1;
+            return true;
+        }
+        if (!isHelpOpen)
+            return false;
+        if (value == 0)
+            return true; // a button let go that was held before
+        const bool isEncoderTurn =
+            number == ENCODER_1 || number == ENCODER_2 ||
+            number == ENCODER_3 || number == ENCODER_4;
+        swallowedController = isEncoderTurn ? -1 : number;
+    } else if (message.isNoteOn()) {
+        if (!isHelpOpen)
+            return false;
+        swallowedNote = message.getNoteNumber();
+    } else if (message.isNoteOff()) {
+        if (message.getNoteNumber() != swallowedNote)
+            return false;
+        swallowedNote = -1;
+        return true;
+    } else {
+        return false;
+    }
+    isHelpOpen = false;
+    listeners.call([](Listener &l) { l.helpClosed(); });
+    return true;
+}
+
 void MidiCommandManager::setFocusedComponent(juce::Component *c) {
     focusedComponent = c;
 }
@@ -47,6 +84,9 @@ void MidiCommandManager::handleIncomingMidiMessage(
 void MidiCommandManager::midiMessageReceived(const juce::MidiMessage &message,
                                              const juce::String &source) {
     juce::Logger::writeToLog(getMidiMessageDescription(message));
+
+    if (handledByHelp(message))
+        return;
 
     if (message.isNoteOn()) {
         if (auto listener = dynamic_cast<Listener *>(focusedComponent))
@@ -251,6 +291,15 @@ void MidiCommandManager::midiMessageReceived(const juce::MidiMessage &message,
             break;
 
         case PLAY_BUTTON:
+            // Control + Play opens the help card for the current screen
+            if (isControlDown) {
+                if (message.getControllerValue() == 127) {
+                    listeners.call([](Listener &l) { l.helpButtonPressed(); });
+                    if (isHelpOpen)
+                        swallowedController = PLAY_BUTTON;
+                }
+                break;
+            }
             if (auto listener = dynamic_cast<Listener *>(focusedComponent)) {
                 if (message.getControllerValue() == 127)
                     listener->playButtonPressed();

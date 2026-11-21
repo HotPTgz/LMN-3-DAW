@@ -1,6 +1,7 @@
 #pragma once
 #include "MessageBox.h"
 #include "OctaveDisplayComponent.h"
+#include "HelpOverlay.h"
 #include "PowerOffOverlay.h"
 #include "RenderMenuComponent.h"
 #include <app_navigation/app_navigation.h>
@@ -40,6 +41,10 @@ class EditTabBarView : public juce::TabbedComponent,
     void powerOffHoldStarted() override;
     void powerOffHoldCancelled() override;
 
+    // Control + Play: a card explaining the screen that's showing
+    void helpButtonPressed() override;
+    void helpClosed() override;
+
     // Used to reset the modifiers list when ever a plugin gets deleted
     void resetModifiersTab();
 
@@ -67,6 +72,7 @@ class EditTabBarView : public juce::TabbedComponent,
     MessageBox messageBox;
     RenderMenuComponent renderMenu;
     PowerOffOverlay powerOffOverlay;
+    HelpOverlay helpOverlay;
 
     // Counts down while Control + Stop are held
     struct PowerOffCountdown : public juce::Timer {

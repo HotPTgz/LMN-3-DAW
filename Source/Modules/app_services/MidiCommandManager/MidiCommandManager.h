@@ -12,6 +12,9 @@ class MidiCommandManager : private juce::MidiInputCallback {
     bool isPlusDown = false;
     bool isMinusDown = false;
     bool isPowerOffHoldActive = false;
+    // While the help card (Control + Play) is open, the next button, encoder
+    // or key closes it instead of doing its usual job
+    bool isHelpOpen = false;
     void midiMessageReceived(const juce::MidiMessage &message,
                              const juce::String &source);
 
@@ -139,6 +142,12 @@ class MidiCommandManager : private juce::MidiInputCallback {
         // listener, not just the focused component.
         virtual void powerOffHoldStarted() {}
         virtual void powerOffHoldCancelled() {}
+
+        // Control + Play: show what the current screen does. Sent to every
+        // listener; helpClosed follows when the next button, encoder or key
+        // closes the card.
+        virtual void helpButtonPressed() {}
+        virtual void helpClosed() {}
     };
 
     void addListener(Listener *l);
@@ -171,6 +180,10 @@ class MidiCommandManager : private juce::MidiInputCallback {
                                    const juce::MidiMessage &message) override;
 
     static juce::String getMidiMessageDescription(const juce::MidiMessage &m);
+
+    // true if the message was used up by the help card
+    bool handledByHelp(const juce::MidiMessage &message);
+    int swallowedController = -1, swallowedNote = -1;
 
   public:
     // Midi mapping (the CC numbers the LMN-3 hardware sends; the computer
