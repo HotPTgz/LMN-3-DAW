@@ -89,12 +89,30 @@ std::vector<NoteEvent> generateEuclid(const EuclidInput &input) {
 }
 
 //==============================================================================
-std::vector<int> turingNotes(const TuringInput &input) {
+// settings from a project file may be out of range: keep them sane
+static TuringInput saneTuring(TuringInput in) {
+    in.length = juce::jlimit(2, 16, in.length);
+    in.range = juce::jlimit(1, 4, in.range);
+    in.root = juce::jlimit(0, 127, in.root);
+    in.scale = juce::jlimit(
+        0, juce::jmax(0, internal_plugins::midifx::Scales::getNames().size() - 1),
+        in.scale);
+    in.bars = juce::jlimit(1, 16, in.bars);
+    in.stepLength = std::isfinite(in.stepLength)
+                        ? juce::jlimit(0.0625, 1.0, in.stepLength)
+                        : 0.25;
+    in.gate = std::isfinite(in.gate) ? juce::jlimit(0.1, 1.0, in.gate) : 0.5;
+    in.lock = std::isfinite(in.lock) ? juce::jlimit(0.0, 1.0, in.lock) : 0.85;
+    return in;
+}
+
+std::vector<int> turingNotes(const TuringInput &unchecked) {
+    const auto input = saneTuring(unchecked);
     const int length = juce::jlimit(2, 16, input.length);
     const int steps = int(std::round(input.bars * 4.0 /
                                      juce::jmax(0.0625, input.stepLength)));
     const juce::uint32 mask = (1u << length) - 1u;
-    juce::Random random(input.seed * 7919 + 13);
+    juce::Random random(juce::int64(input.seed) * 7919 + 13);
     juce::uint32 reg = juce::uint32(random.nextInt()) & mask;
     if (reg == 0)
         reg = 1;
@@ -117,9 +135,12 @@ std::vector<int> turingNotes(const TuringInput &input) {
     return notes;
 }
 
-double turingLength(const TuringInput &input) { return input.bars * 4.0; }
+double turingLength(const TuringInput &input) {
+    return saneTuring(input).bars * 4.0;
+}
 
-std::vector<NoteEvent> generateTuring(const TuringInput &input) {
+std::vector<NoteEvent> generateTuring(const TuringInput &unchecked) {
+    const auto input = saneTuring(unchecked);
     std::vector<NoteEvent> events;
     auto notes = turingNotes(input);
     for (size_t i = 0; i < notes.size(); i++)

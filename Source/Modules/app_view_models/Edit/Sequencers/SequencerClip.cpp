@@ -40,13 +40,15 @@ void SequencerClip::write(const std::vector<Sequencers::NoteEvent> &notes,
     auto &sequence = clip->getSequence();
     sequence.clear(nullptr);
     for (auto &note : notes) {
-        if (note.start >= lengthBeats)
+        if (!std::isfinite(note.start) || !std::isfinite(note.length) ||
+            note.start < 0.0 || note.start >= lengthBeats)
             continue;
         double length = juce::jmin(note.length, lengthBeats - note.start);
         sequence.addNote(
-            note.pitch, tracktion::BeatPosition::fromBeats(note.start),
+            juce::jlimit(0, 127, note.pitch),
+            tracktion::BeatPosition::fromBeats(note.start),
             tracktion::BeatDuration::fromBeats(juce::jmax(0.01, length)),
-            note.velocity, 0, nullptr);
+            juce::jlimit(1, 127, note.velocity), 0, nullptr);
     }
 }
 

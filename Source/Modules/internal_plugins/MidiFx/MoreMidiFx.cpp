@@ -463,6 +463,7 @@ void FingerEngine::process(tracktion::MidiMessageArray &midi,
     auto notes = takeNotes(midi, allOff);
     if (allOff) {
         heldMask = 0;
+        keyRoute = makeKeyRoute();
         for (auto &o : offs)
             addAt(midi, juce::MidiMessage::noteOff(channel, o.note), 0.0);
         offs.clear();
@@ -480,7 +481,18 @@ void FingerEngine::process(tracktion::MidiMessageArray &midi,
 
     // the keys: pattern keys are taken, the rest pass through
     for (auto &m : notes) {
+        auto &route = keyRoute[size_t(m.getNoteNumber() & 127)];
         int slot = m.getNoteNumber() - settings.baseKey;
+        if (m.isNoteOn())
+            route = juce::isPositiveAndBelow(slot, Finger::numSlots)
+                        ? (signed char)slot
+                        : passThrough;
+        else {
+            // let go the way it went down
+            if (route != notHeld)
+                slot = route;
+            route = notHeld;
+        }
         if (!juce::isPositiveAndBelow(slot, Finger::numSlots)) {
             addAt(midi, m, m.getTimeStamp());
             continue;

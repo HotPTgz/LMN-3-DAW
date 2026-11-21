@@ -156,4 +156,33 @@ TEST_F(TempoSettingsViewModelTest, decrementClickTrackGain) {
     viewModel.handleUpdateNowIfNeeded();
 }
 
+TEST_F(TempoSettingsViewModelTest, clipsAndLoopKeepTheirBeatsWhenTheTempoChanges) {
+    auto track = tracktion::getAudioTracks(*edit)[0];
+    // a 4 beat clip and loop at 120 bpm (2 seconds)
+    auto clip = track->insertMIDIClip(
+        tracktion::TimeRange(tracktion::TimePosition(),
+                             tracktion::TimeDuration::fromSeconds(2.0)),
+        nullptr);
+    auto &transport = edit->getTransport();
+    transport.setLoopRange(tracktion::TimeRange(
+        tracktion::TimePosition(), tracktion::TimeDuration::fromSeconds(2.0)));
+    auto &tempo = edit->tempoSequence;
+    auto beats = [&](tracktion::TimeRange r) {
+        return (tempo.toBeats(r.getEnd()) - tempo.toBeats(r.getStart())).inBeats();
+    };
+    for (auto change : {0, 1, 2}) {
+        if (change == 0)
+            viewModel.setBpm(60);
+        else if (change == 1)
+            viewModel.incrementBpm();
+        else
+            viewModel.decrementBpm();
+        EXPECT_NEAR(beats(clip->getEditTimeRange()), 4.0, 1.0e-6)
+            << "the clip lost beats after a tempo change";
+        EXPECT_NEAR(beats(transport.getLoopRange()), 4.0, 1.0e-6)
+            << "the loop lost beats after a tempo change";
+    }
+    EXPECT_NEAR(clip->getEditTimeRange().getLength().inSeconds(), 4.0, 1.0e-6);
+}
+
 } // namespace AppViewModelsTests

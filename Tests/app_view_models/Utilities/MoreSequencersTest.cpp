@@ -175,4 +175,25 @@ TEST(FingerTest, variationsChangeThePattern) {
     EXPECT_GT(Finger::hit(0, 3, 1, 15), 0); // the fill's snare
 }
 
+TEST(FingerTest, keysAreLetGoTheWayTheyWentDown) {
+    using namespace internal_plugins::midifx;
+    FingerEngine engine;
+    FingerEngine::Settings s; // pattern keys 54 to 65
+    auto send = [&](juce::MidiMessage m) {
+        tracktion::MidiMessageArray midi;
+        midi.addMidiMessage(m, 0.0, tracktion::MidiMessageArray::notMPE);
+        engine.process(midi, 0.0, 2.0, 0.001, s);
+        return midi;
+    };
+    send(juce::MidiMessage::noteOn(1, 55, 1.0f)); // a pattern key
+    send(juce::MidiMessage::noteOn(1, 50, 1.0f)); // a plain note
+    s.baseKey = 48; // the Key knob moves while both are held
+    send(juce::MidiMessage::noteOff(1, 55));
+    EXPECT_EQ(engine.getHeldMask(), 0u) << "the pattern never stopped";
+    auto out = send(juce::MidiMessage::noteOff(1, 50));
+    ASSERT_EQ(out.size(), 1) << "the plain note's note-off was swallowed";
+    EXPECT_EQ(out[0].getNoteNumber(), 50);
+    EXPECT_EQ(engine.getHeldMask(), 0u);
+}
+
 } // namespace AppViewModelsTests

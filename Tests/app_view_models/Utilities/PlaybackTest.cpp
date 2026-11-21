@@ -16,6 +16,63 @@ struct SingleThreadedBehaviour : tracktion::EngineBehaviour {
     int getNumberOfCPUsToUseForAudio() override { return 1; }
 };
 
+// Sits between the MIDI effects and the instrument and watches the notes:
+// remembers the longest time any note was held
+class MidiProbePlugin : public tracktion::Plugin {
+  public:
+    explicit MidiProbePlugin(tracktion::PluginCreationInfo info) : Plugin(info) {}
+    ~MidiProbePlugin() override { notifyListenersOfDeletion(); }
+    static const char *getPluginName() { return "Probe"; }
+    static const char *xmlTypeName;
+    juce::String getName() override { return "Probe"; }
+    juce::String getPluginType() override { return xmlTypeName; }
+    juce::String getSelectableDescription() override { return getName(); }
+    bool takesMidiInput() override { return true; }
+    bool takesAudioInput() override { return true; }
+    bool producesAudioWhenNoAudioInput() override { return false; }
+    bool needsConstantBufferSize() override { return false; }
+    void initialise(const tracktion::PluginInitialisationInfo &i) override {
+        sampleRate = i.sampleRate;
+    }
+    void deinitialise() override {}
+    void applyToBuffer(const tracktion::PluginRenderContext &fc) override {
+        const double blockStart = samples / sampleRate;
+        if (fc.bufferForMidiMessages != nullptr) {
+            if (fc.bufferForMidiMessages->isAllNotesOff)
+                onSince.fill(-1.0);
+            for (auto &m : *fc.bufferForMidiMessages) {
+                if (m.isAllNotesOff() || m.isAllSoundOff())
+                    onSince.fill(-1.0);
+                if (!m.isNoteOnOrOff())
+                    continue;
+                auto &since = onSince[size_t(m.getNoteNumber())];
+                if (m.isNoteOn()) {
+                    if (since < 0.0)
+                        since = blockStart + m.getTimeStamp();
+                } else
+                    since = -1.0;
+            }
+        }
+        samples += fc.bufferNumSamples;
+        const double now = samples / sampleRate;
+        for (int n = 0; n < 128; n++)
+            if (onSince[size_t(n)] >= 0.0 && now - onSince[size_t(n)] > longest) {
+                longest = now - onSince[size_t(n)];
+                longestNote = n;
+            }
+    }
+    std::array<double, 128> onSince = [] {
+        std::array<double, 128> a;
+        a.fill(-1.0);
+        return a;
+    }();
+    std::atomic<double> longest{0.0};
+    int longestNote = -1;
+    double sampleRate = 44100.0;
+    juce::int64 samples = 0;
+};
+const char *MidiProbePlugin::xmlTypeName = "lmn3TestProbe";
+
 class PlaybackHarness {
   public:
     explicit PlaybackHarness(double rate = 44100.0, int block = 256)
@@ -43,6 +100,7 @@ class PlaybackHarness {
         pm.createBuiltInType<StringEnginePlugin>();
         pm.createBuiltInType<FmEnginePlugin>();
         pm.createBuiltInType<PulseEnginePlugin>();
+        pm.createBuiltInType<MidiProbePlugin>();
 
         tracktion::HostedAudioDeviceInterface::Parameters p;
         p.sampleRate = sampleRate;
@@ -716,4 +774,102 @@ TEST(LivePlayingTest, fingerPlaysWhileAPatternKeyIsHeld) {
             << "a new hit " << (i + 1) * 0.05 << " s in, after the key was let go";
 }
 
+//==============================================================================
+// Stuck notes: hold keys, turn every knob of a MIDI effect while they're
+// held (the chord type, the scale, the echo transpose...), let go. Every note
+// must still stop. The transport is stopped, so no "all notes off" from Play
+// or Stop can hide a note that never got its note-off.
+class StuckNoteTest : public ::testing::TestWithParam<std::tuple<int, int>> {};
+
+namespace {
+const char *const stuckNoteTypes[] = {
+    ArpeggiatorPlugin::xmlTypeName, ScaleLockPlugin::xmlTypeName,
+    ChordPlugin::xmlTypeName,       NoteRepeatPlugin::xmlTypeName,
+    StrumPlugin::xmlTypeName,       HumanisePlugin::xmlTypeName,
+    MidiEchoPlugin::xmlTypeName,    FingerPlugin::xmlTypeName};
+} // namespace
+
+TEST_P(StuckNoteTest, turningKnobsWhileHoldingNeverLeavesANoteOn) {
+    const juce::String type = stuckNoteTypes[std::get<0>(GetParam())];
+    const int seed = std::get<1>(GetParam());
+    PlaybackHarness h;
+    auto plugin = h.add(type);
+    h.add(PulseEnginePlugin::xmlTypeName);
+    h.routeKeysTo(0);
+    h.run(0.2);
+
+    juce::Random random(seed);
+    auto turnKnobs = [&] {
+        if (std::getenv("LMN3_NOKNOBS")) return;
+        for (auto p : plugin->getAutomatableParameters())
+            p->setNormalisedParameter(p->paramID == "latch" ? 0.0f
+                                                             : random.nextFloat(),
+                                      juce::sendNotificationSync);
+    };
+    const int held[] = {48, 55, 60, 64, 67};
+    for (int n : held)
+        h.keys.push_back({0.05 + 0.01 * (n % 3),
+                          juce::MidiMessage::noteOn(1, n, 0.8f)});
+    h.run(0.4);
+    for (int round = 0; round < 6; round++) {
+        turnKnobs();
+        h.run(0.13);
+    }
+    for (int n : held)
+        h.keys.push_back({0.02 * (n % 4), juce::MidiMessage::noteOff(1, n)});
+    turnKnobs();
+    h.run(0.2);
+    turnKnobs();
+    // long enough for any echo or strum to finish and the synth to ring out
+    auto peaks = h.run(12.0);
+    EXPECT_LT(PlaybackHarness::maxOf(peaks, peaks.size() - 20, peaks.size()),
+              1.0e-4f)
+        << type << " left a note sounding (seed " << seed << ")";
+    EXPECT_FALSE(h.nonFinite);
+}
+
+// The same while the song loops: notes that cross the loop end, knobs
+// turning all the time. The probe flags any note held far longer than the
+// music asks for (no note here is longer than half a second).
+TEST_P(StuckNoteTest, loopingWithKnobsTurningNeverLeavesANoteOn) {
+    const juce::String type = stuckNoteTypes[std::get<0>(GetParam())];
+    const int seed = std::get<1>(GetParam());
+    PlaybackHarness h(48000.0, seed % 2 == 0 ? 128 : 333);
+    auto plugin = h.add(type);
+    auto probe = dynamic_cast<MidiProbePlugin *>(h.add(MidiProbePlugin::xmlTypeName));
+    h.add(PulseEnginePlugin::xmlTypeName);
+    h.addNotes({{{48, 0.0, 0.5}}, {{60, 1.5, 0.5}}, {{64, 1.5, 0.5}},
+                {{67, 1.75, 0.25}}, {{55, 1.0, 1.0}}, {{58, 0.98, 0.5}},
+                {{62, 0.25, 0.1}}, {{54, 0.5, 0.5}}, {{56, 1.0, 0.75}}},
+               2.0);
+    h.loop(0.0, 2.0);
+    h.play();
+    juce::Random random(seed);
+    for (int round = 0; round < 60; round++) {
+        if (!std::getenv("LMN3_NOKNOBS"))
+            for (auto p : plugin->getAutomatableParameters())
+                if (random.nextInt(3) == 0)
+                    p->setNormalisedParameter(
+                        p->paramID == "latch" ? 0.0f : random.nextFloat(),
+                        juce::sendNotificationSync);
+        h.run(0.25);
+    }
+    ASSERT_NE(probe, nullptr);
+    EXPECT_GT(probe->longest.load(), 0.02) << "the probe saw no notes";
+    EXPECT_LT(probe->longest.load(), 3.0)
+        << type << ": note " << probe->longestNote << " was held for "
+        << probe->longest.load() << " s (seed " << seed << ")";
+    EXPECT_FALSE(h.nonFinite);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    All, StuckNoteTest,
+    ::testing::Combine(::testing::Range(0, int(std::size(stuckNoteTypes))),
+                       ::testing::Range(1, 6)),
+    [](const ::testing::TestParamInfo<std::tuple<int, int>> &info) {
+        return std::string(stuckNoteTypes[std::get<0>(info.param)]) + "_" +
+               std::to_string(std::get<1>(info.param));
+    });
+
 } // namespace AppViewModelsTests
+
