@@ -184,6 +184,51 @@ TEST(StrumTest, downAndAlternate) {
     expectBalanced(events);
 }
 
+// A chord played by hand: the keys land a few milliseconds apart, in
+// different blocks. It's still one strum.
+TEST(StrumTest, handPlayedChordIsStrummed) {
+    StrumEngine engine;
+    StrumEngine::Settings s;
+    s.seconds = 0.03;
+    const double block = 0.01;
+    auto events = run(
+        40, block,
+        {{0, {on(60, 90, 0.002)}},
+         {1, {on(64, 90, 0.004)}},
+         {2, {on(67, 90, 0.001)}},
+         {30, {off(60, 0.0), off(64, 0.0), off(67, 0.0)}}},
+        [&](tracktion::MidiMessageArray &m, int) {
+            engine.process(m, block, s);
+        });
+    auto hits = ons(events);
+    ASSERT_EQ(hits.size(), 3u);
+    EXPECT_NEAR(hits[0].time, 0.002, 1.0e-6);
+    EXPECT_NEAR(hits[1].time, 0.032, 1.0e-6);
+    EXPECT_NEAR(hits[2].time, 0.062, 1.0e-6);
+    expectBalanced(events);
+}
+
+TEST(StrumTest, chordsFarApartAreSeparateStrums) {
+    StrumEngine engine;
+    StrumEngine::Settings s;
+    s.seconds = 0.03;
+    s.alternate = true;
+    const double block = 0.01;
+    auto events = run(
+        60, block,
+        {{0, {on(60, 90, 0.0), on(64, 90, 0.0)}},
+         {20, {off(60, 0.0), off(64, 0.0), on(60, 90, 0.0), on(64, 90, 0.0)}},
+         {40, {off(60, 0.0), off(64, 0.0)}}},
+        [&](tracktion::MidiMessageArray &m, int) {
+            engine.process(m, block, s);
+        });
+    auto hits = ons(events);
+    ASSERT_EQ(hits.size(), 4u);
+    EXPECT_NEAR(hits[2].time, 0.2, 1.0e-6); // the second starts on time
+    EXPECT_EQ(hits[2].note, 64);            // and goes the other way
+    expectBalanced(events);
+}
+
 TEST(StrumTest, quickReleaseNeverComesBeforeTheNote) {
     StrumEngine engine;
     StrumEngine::Settings s;

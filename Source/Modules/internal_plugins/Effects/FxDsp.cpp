@@ -220,6 +220,17 @@ const juce::StringArray &ResonantFilter::getTypeNames() {
     return names;
 }
 
+// Leaves everything up to 0.8 alone and bends louder peaks smoothly towards
+// 1.0 (same slope at 0.8, so no kink)
+static float softLimit(float x) {
+    const float knee = 0.8f;
+    float a = std::abs(x);
+    if (a <= knee)
+        return x;
+    float over = (a - knee) / (1.0f - knee);
+    return std::copysign(knee + (1.0f - knee) * std::tanh(over), x);
+}
+
 void ResonantFilter::prepare(double sr) {
     sampleRate = sr;
     for (int c = 0; c < 2; c++) {
@@ -276,8 +287,9 @@ void ResonantFilter::process(float *left, float *right, int n,
                 float y = stage1[c].process(ch[c][i], out);
                 if (s.type == lowPass24)
                     y = stage2[c].process(y, out);
-                // keep big resonance from blowing up
-                ch[c][i] = std::tanh(y);
+                // keep big resonance from blowing up, without touching
+                // ordinary levels
+                ch[c][i] = softLimit(y);
             }
         }
     }

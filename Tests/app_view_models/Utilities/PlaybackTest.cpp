@@ -9,7 +9,6 @@ namespace AppViewModelsTests {
 using namespace internal_plugins;
 
 namespace {
-constexpr int blockSize = 256;
 
 // One audio thread: the test drives the audio callback itself, and many
 // engines come and go in one test run
@@ -19,7 +18,8 @@ struct SingleThreadedBehaviour : tracktion::EngineBehaviour {
 
 class PlaybackHarness {
   public:
-    explicit PlaybackHarness(double rate = 44100.0) : sampleRate(rate) {
+    explicit PlaybackHarness(double rate = 44100.0, int block = 256)
+        : sampleRate(rate), blockSize(block) {
         auto &pm = engine.getPluginManager();
         pm.createBuiltInType<DrumSamplerPlugin>();
         pm.createBuiltInType<ArpeggiatorPlugin>();
@@ -113,19 +113,53 @@ class PlaybackHarness {
         pump();
     }
 
+    // Sends what's played on the keys to a track, like the app does for the
+    // selected track
+    void routeKeysTo(int trackIndex) {
+        auto &dm = engine.getDeviceManager();
+        for (int i = 0; i < dm.getNumMidiInDevices(); i++)
+            if (auto in = dm.getMidiInDevice(i)) {
+                in->setEndToEndEnabled(true);
+                in->setEnabled(true);
+            }
+        // the input devices were enabled after the edit started playing
+        edit->getTransport().freePlaybackContext();
+        edit->getTransport().ensureContextAllocated();
+        pump();
+        for (auto instance : edit->getAllInputDevices())
+            if (instance->getInputDevice().isMidi()) {
+                instance->setTargetTrack(track(trackIndex), 0, true);
+                instance->setRecordingEnabled(track(trackIndex), true);
+            }
+        edit->restartPlayback();
+        pump();
+    }
+
+    // keys to play during the next run(): seconds from its start, message
+    std::vector<std::pair<double, juce::MidiMessage>> keys;
+
     // Runs `seconds` of audio, returning the peak of each 50 ms
     std::vector<float> run(double seconds) {
         std::vector<float> peaks;
         juce::AudioBuffer<float> buffer(2, blockSize);
         juce::MidiBuffer midi;
-        const int blocksPerSlice = int(0.05 * sampleRate / blockSize);
+        const int blocksPerSlice =
+            juce::jmax(1, int(0.05 * sampleRate / blockSize));
         int numBlocks = int(seconds * sampleRate / blockSize);
         float peak = 0.0f;
         for (int b = 0; b < numBlocks; b++) {
             buffer.clear();
             midi.clear();
+            const double blockStart = b * blockSize / sampleRate;
+            for (auto &k : keys) {
+                int pos = juce::roundToInt((k.first - blockStart) * sampleRate);
+                if (pos >= 0 && pos < blockSize)
+                    midi.addEvent(k.second, pos);
+            }
             engine.getDeviceManager().getHostedAudioDeviceInterface().processBlock(
                 buffer, midi);
+            if (b % 8 == 0)
+                pump(1);
             for (int c = 0; c < 2; c++)
                 for (int i = 0; i < blockSize; i++) {
                     float s = buffer.getSample(c, i);
@@ -139,6 +173,7 @@ class PlaybackHarness {
                 peak = 0.0f;
             }
         }
+        keys.clear();
         return peaks;
     }
 
@@ -150,11 +185,21 @@ class PlaybackHarness {
         return m;
     }
 
-    void pump() {
-        juce::MessageManager::getInstance()->runDispatchLoopUntil(20);
+    void pump(int ms = 20) {
+        juce::MessageManager::getInstance()->runDispatchLoopUntil(ms);
+    }
+
+    std::vector<int> clipNotes(int trackIndex) {
+        std::vector<int> notes;
+        for (auto clip : track(trackIndex).getClips())
+            if (auto midiClip = dynamic_cast<tracktion::MidiClip *>(clip))
+                for (auto n : midiClip->getSequence().getNotes())
+                    notes.push_back(n->getNoteNumber());
+        return notes;
     }
 
     const double sampleRate;
+    const int blockSize;
     tracktion::Engine engine{"ENGINE", nullptr,
                              std::make_unique<SingleThreadedBehaviour>()};
     std::unique_ptr<tracktion::Edit> edit;
@@ -405,5 +450,270 @@ INSTANTIATE_TEST_SUITE_P(All, MidiFxRenderTest,
                                            StrumPlugin::xmlTypeName,
                                            HumanisePlugin::xmlTypeName,
                                            MidiEchoPlugin::xmlTypeName));
+
+//==============================================================================
+// Stress: every plugin with its knobs thrown around at random while notes
+// play, at odd block sizes and sample rates. Nothing may blow up (NaN, huge
+// levels) or crash.
+namespace {
+struct StressCase {
+    const char *type;
+    bool isInstrument;
+};
+const StressCase stressCases[] = {
+    {StringEnginePlugin::xmlTypeName, true},
+    {FmEnginePlugin::xmlTypeName, true},
+    {PulseEnginePlugin::xmlTypeName, true},
+    {WavetableEnginePlugin::xmlTypeName, true},
+    {MalletsEnginePlugin::xmlTypeName, true},
+    {GranularEnginePlugin::xmlTypeName, true},
+    {DrumSynthPlugin::xmlTypeName, true},
+    {TapePlugin::xmlTypeName, false},
+    {LofiPlugin::xmlTypeName, false},
+    {DrivePlugin::xmlTypeName, false},
+    {ResonantFilterPlugin::xmlTypeName, false},
+    {DuckerPlugin::xmlTypeName, false},
+    {BeatRepeatPlugin::xmlTypeName, false},
+    {ArpeggiatorPlugin::xmlTypeName, false},
+    {ScaleLockPlugin::xmlTypeName, false},
+    {ChordPlugin::xmlTypeName, false},
+    {NoteRepeatPlugin::xmlTypeName, false},
+    {StrumPlugin::xmlTypeName, false},
+    {HumanisePlugin::xmlTypeName, false},
+    {MidiEchoPlugin::xmlTypeName, false},
+    {FingerPlugin::xmlTypeName, false},
+};
+struct StressConfig {
+    double rate;
+    int block;
+};
+const StressConfig stressConfigs[] = {
+    {44100.0, 256}, {48000.0, 17}, {96000.0, 1024}, {22050.0, 64}};
+} // namespace
+
+class StressTest
+    : public ::testing::TestWithParam<std::tuple<int, int>> {};
+
+TEST_P(StressTest, randomKnobsNeverBlowUp) {
+    auto c = stressCases[std::get<0>(GetParam())];
+    auto config = stressConfigs[std::get<1>(GetParam())];
+    PlaybackHarness h(config.rate, config.block);
+    auto plugin = h.add(c.type);
+    if (!c.isInstrument)
+        h.add(PulseEnginePlugin::xmlTypeName);
+    if (juce::String(c.type) == MidiEchoPlugin::xmlTypeName ||
+        juce::String(c.type) == ArpeggiatorPlugin::xmlTypeName)
+        ; // MIDI effects go before the instrument: add() keeps the order
+    // dense notes and chords, high and low
+    h.addNotes({{{36, 0.0, 0.5}}, {{48, 0.5, 0.25}}, {{60, 1.0, 2.0}},
+                {{64, 1.0, 2.0}}, {{67, 1.0, 2.0}}, {{96, 2.0, 0.1}},
+                {{100, 2.1, 0.1}}, {{24, 3.0, 1.0}}, {{54, 0.0, 4.0}}},
+               4.0);
+    h.loop(0.0, 4.0);
+    h.play();
+
+    juce::Random random(42);
+    auto params = plugin->getAutomatableParameters();
+    float loudest = 0.0f;
+    for (int round = 0; round < 40; round++) {
+        for (auto p : params)
+            if (p->paramID != "active" || round % 3 == 0)
+                p->setNormalisedParameter(random.nextFloat(),
+                                          juce::sendNotificationSync);
+        if (auto rep = dynamic_cast<BeatRepeatPlugin *>(plugin))
+            rep->setActive(round % 4 != 3);
+        auto peaks = h.run(0.1);
+        loudest = juce::jmax(loudest, PlaybackHarness::maxOf(peaks, 0, 100));
+    }
+    // and every knob at its ends
+    for (float end : {0.0f, 1.0f}) {
+        for (auto p : params)
+            p->setNormalisedParameter(end, juce::sendNotificationSync);
+        auto peaks = h.run(0.5);
+        loudest = juce::jmax(loudest, PlaybackHarness::maxOf(peaks, 0, 100));
+    }
+    h.stop();
+    h.run(0.2);
+    EXPECT_FALSE(h.nonFinite) << c.type << " made NaN or infinity";
+    EXPECT_LT(loudest, 16.0f) << c.type << " got far too loud";
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    All, StressTest,
+    ::testing::Combine(::testing::Range(0, int(std::size(stressCases))),
+                       ::testing::Range(0, int(std::size(stressConfigs)))),
+    [](const ::testing::TestParamInfo<std::tuple<int, int>> &info) {
+        auto c = stressCases[std::get<0>(info.param)];
+        auto config = stressConfigs[std::get<1>(info.param)];
+        return std::string(c.type) + "_" +
+               std::to_string(int(config.rate)) + "_" +
+               std::to_string(config.block);
+    });
+
+//==============================================================================
+// Save and reload: every plugin keeps every knob, and the sequencers keep
+// their settings
+class SaveReloadTest : public ::testing::TestWithParam<int> {};
+
+TEST_P(SaveReloadTest, everyKnobComesBack) {
+    auto c = stressCases[GetParam()];
+    auto file = juce::File::createTempFile(".tracktionedit");
+    std::map<juce::String, float> saved;
+    {
+        PlaybackHarness h;
+        auto plugin = h.add(c.type);
+        juce::Random random(7);
+        for (auto p : plugin->getAutomatableParameters()) {
+            p->setNormalisedParameter(random.nextFloat(),
+                                      juce::sendNotificationSync);
+            saved[p->paramID] = p->getCurrentValue();
+        }
+        h.pump();
+        h.edit->editFileRetriever = [file] { return file; };
+        ASSERT_TRUE(tracktion::EditFileOperations(*h.edit).save(false, true,
+                                                                  false));
+    }
+    PlaybackHarness h2;
+    auto loaded = tracktion::loadEditFromFile(h2.engine, file);
+    ASSERT_NE(loaded, nullptr);
+    tracktion::Plugin *found = nullptr;
+    for (auto t : tracktion::getAudioTracks(*loaded))
+        for (auto p : t->pluginList)
+            if (p->getPluginType() == juce::String(c.type))
+                found = p;
+    if (found == nullptr)
+        std::cout << file.loadFileAsString() << std::endl;
+    ASSERT_NE(found, nullptr) << c.type << " missing after reload";
+    for (auto p : found->getAutomatableParameters()) {
+        auto it = saved.find(p->paramID);
+        if (it == saved.end())
+            continue;
+        if (p->paramID == "active")
+            continue; // Beat Repeat's hold isn't meant to come back on
+        EXPECT_NEAR(p->getCurrentValue(), it->second,
+                    1.0e-3f * juce::jmax(1.0f, std::abs(it->second)))
+            << c.type << " " << p->paramID;
+    }
+    if (found == nullptr)
+        std::cout << file.loadFileAsString().substring(0, 4000) << std::endl;
+    loaded.reset();
+    file.deleteFile();
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    All, SaveReloadTest, ::testing::Range(0, int(std::size(stressCases))),
+    [](const ::testing::TestParamInfo<int> &info) {
+        return std::string(stressCases[info.param].type);
+    });
+
+TEST(SaveReloadSequencersTest, sequencersKeepTheirSettings) {
+    auto file = juce::File::createTempFile(".tracktionedit");
+    {
+        PlaybackHarness h;
+        h.add(DrumSynthPlugin::xmlTypeName, 0);
+        h.add(PulseEnginePlugin::xmlTypeName, 1);
+        h.add(PulseEnginePlugin::xmlTypeName, 2);
+        auto t0 = tracktion::getAudioTracks(*h.edit)[0];
+        {
+            app_view_models::EuclideanSequencerViewModel e(t0);
+            e.selectForNote(55);
+            e.nudgeHits(3);
+            e.nudgeSteps(-4);
+            e.nudgeRotate(2);
+            e.nudgeVelocity(-2);
+            e.nudgeSwing(5);
+        }
+        auto t1 = tracktion::getAudioTracks(*h.edit)[1];
+        {
+            app_view_models::TuringSequencerViewModel t(t1);
+            t.nudgeLock(-3);
+            t.nudgeLength(-5);
+            t.nudgeRange(1);
+            t.nudgeScale(2);
+            t.nudgeRate(1);
+            t.nudgeGate(3);
+            t.notePressed(52);
+            t.reroll();
+        }
+        {
+            app_view_models::ChordsSequencerViewModel ch(t1);
+            ch.nudgeKey(5);
+            ch.nudgeBars(2);
+            ch.nudgeBar(1);
+            ch.nudgeChord(2);
+            ch.nudgeFollow(1);
+        }
+        h.edit->editFileRetriever = [file] { return file; };
+        ASSERT_TRUE(tracktion::EditFileOperations(*h.edit).save(false, true,
+                                                                  false));
+    }
+    PlaybackHarness h2;
+    auto loaded = tracktion::loadEditFromFile(h2.engine, file);
+    ASSERT_NE(loaded, nullptr);
+    auto tracks = tracktion::getAudioTracks(*loaded);
+    ASSERT_GE(tracks.size(), 3);
+    {
+        app_view_models::EuclideanSequencerViewModel e(tracks[0]);
+        auto &ring = e.getRing(2);
+        EXPECT_EQ(ring.steps, 12);
+        EXPECT_EQ(ring.hits, juce::jmin(12, 3));
+        EXPECT_EQ(ring.rotate, 2);
+        EXPECT_EQ(e.getVelocity(), 90);
+        EXPECT_NEAR(e.getSwing(), 0.25, 1.0e-9);
+    }
+    {
+        app_view_models::TuringSequencerViewModel t(tracks[1]);
+        EXPECT_EQ(t.getInput().length, 11);
+        EXPECT_EQ(t.getInput().range, 3);
+        EXPECT_EQ(t.getInput().root, 52);
+        EXPECT_EQ(t.getInput().seed, 2);
+        EXPECT_NEAR(t.getInput().lock, 0.70, 1.0e-9);
+    }
+    {
+        app_view_models::ChordsSequencerViewModel ch(tracks[1]);
+        EXPECT_EQ(ch.getInput().key, 5);
+        EXPECT_EQ(ch.getInput().degrees.size(), 6);
+        EXPECT_EQ(ch.getFollowers(), 1);
+    }
+    loaded.reset();
+    file.deleteFile();
+}
+
+//==============================================================================
+// Playing the keys and recording through MIDI effects
+TEST(LivePlayingTest, keysPlayThroughTheArpeggiatorWhileStopped) {
+    PlaybackHarness h;
+    h.add(ArpeggiatorPlugin::xmlTypeName);
+    h.add(PulseEnginePlugin::xmlTypeName);
+    h.routeKeysTo(0);
+    h.run(0.2);
+    h.keys = {{0.1, juce::MidiMessage::noteOn(1, 60, 0.8f)},
+              {0.1, juce::MidiMessage::noteOn(1, 64, 0.8f)},
+              {1.0, juce::MidiMessage::noteOff(1, 60)},
+              {1.0, juce::MidiMessage::noteOff(1, 64)}};
+    auto peaks = h.run(2.5);
+    EXPECT_GT(PlaybackHarness::maxOf(peaks, 2, 20), 0.001f) << "silent while held";
+    EXPECT_LT(PlaybackHarness::maxOf(peaks, 40, 50), 0.001f)
+        << "still playing after the keys were let go";
+}
+
+// (Recording itself can't be tested here: the engine's stand-in MIDI input
+// doesn't record.)
+TEST(LivePlayingTest, fingerPlaysWhileAPatternKeyIsHeld) {
+    PlaybackHarness h;
+    h.add(FingerPlugin::xmlTypeName);
+    h.add(DrumSynthPlugin::xmlTypeName);
+    h.routeKeysTo(0);
+    h.play();
+    h.keys = {{0.1, juce::MidiMessage::noteOn(1, 54, 0.8f)},
+              {1.6, juce::MidiMessage::noteOff(1, 54)}};
+    auto peaks = h.run(6.0);
+    EXPECT_GT(PlaybackHarness::maxOf(peaks, 4, 30), 0.001f);
+    // the last hits ring out (a kick takes a couple of seconds), but no new
+    // ones start
+    for (size_t i = 60; i + 1 < peaks.size(); i++)
+        EXPECT_LE(peaks[i + 1], peaks[i] * 1.05f + 1.0e-5f)
+            << "a new hit " << (i + 1) * 0.05 << " s in, after the key was let go";
+}
 
 } // namespace AppViewModelsTests

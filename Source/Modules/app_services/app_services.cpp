@@ -11,3 +11,6 @@
 
 // PowerControl
 #include "PowerControl/PowerControl.cpp"
+
+// ProjectRepair
+#include "ProjectRepair/ProjectRepair.cpp"

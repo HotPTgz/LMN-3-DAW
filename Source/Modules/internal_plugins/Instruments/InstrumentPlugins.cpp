@@ -49,9 +49,12 @@ WavetableEnginePlugin::WavetableEnginePlugin(tracktion::PluginCreationInfo info)
 }
 
 WavetableEnginePlugin::~WavetableEnginePlugin() {
-    notifyListenersOfDeletion();
+    // detach first: telling listeners about the deletion empties the
+    // parameter list, and parameters still attached would later touch
+    // values that are already gone
     for (auto p : getAutomatableParameters())
         p->detachFromCurrentValue();
+    notifyListenersOfDeletion();
 }
 
 //==============================================================================
@@ -77,9 +80,12 @@ MalletsEnginePlugin::MalletsEnginePlugin(tracktion::PluginCreationInfo info)
 }
 
 MalletsEnginePlugin::~MalletsEnginePlugin() {
-    notifyListenersOfDeletion();
+    // detach first: telling listeners about the deletion empties the
+    // parameter list, and parameters still attached would later touch
+    // values that are already gone
     for (auto p : getAutomatableParameters())
         p->detachFromCurrentValue();
+    notifyListenersOfDeletion();
 }
 
 //==============================================================================
@@ -114,9 +120,12 @@ GranularEnginePlugin::GranularEnginePlugin(
 }
 
 GranularEnginePlugin::~GranularEnginePlugin() {
-    notifyListenersOfDeletion();
+    // detach first: telling listeners about the deletion empties the
+    // parameter list, and parameters still attached would later touch
+    // values that are already gone
     for (auto p : getAutomatableParameters())
         p->detachFromCurrentValue();
+    notifyListenersOfDeletion();
 }
 
 juce::File GranularEnginePlugin::getSampleFile() const {
@@ -197,9 +206,12 @@ DrumSynthPlugin::DrumSynthPlugin(tracktion::PluginCreationInfo info)
 }
 
 DrumSynthPlugin::~DrumSynthPlugin() {
-    notifyListenersOfDeletion();
+    // detach first: telling listeners about the deletion empties the
+    // parameter list, and parameters still attached would later touch
+    // values that are already gone
     for (auto p : getAutomatableParameters())
         p->detachFromCurrentValue();
+    notifyListenersOfDeletion();
 }
 
 tracktion::AutomatableParameter *DrumSynthPlugin::getParameter(int pad,

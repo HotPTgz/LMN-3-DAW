@@ -127,9 +127,12 @@ TapePlugin::TapePlugin(tracktion::PluginCreationInfo info)
 }
 
 TapePlugin::~TapePlugin() {
-    notifyListenersOfDeletion();
+    // detach first: telling listeners about the deletion empties the
+    // parameter list, and parameters still attached would later touch
+    // values that are already gone
     for (auto p : getAutomatableParameters())
         p->detachFromCurrentValue();
+    notifyListenersOfDeletion();
 }
 
 void TapePlugin::prepare(double sr) { dsp.prepare(sr); }
@@ -169,9 +172,12 @@ LofiPlugin::LofiPlugin(tracktion::PluginCreationInfo info)
 }
 
 LofiPlugin::~LofiPlugin() {
-    notifyListenersOfDeletion();
+    // detach first: telling listeners about the deletion empties the
+    // parameter list, and parameters still attached would later touch
+    // values that are already gone
     for (auto p : getAutomatableParameters())
         p->detachFromCurrentValue();
+    notifyListenersOfDeletion();
 }
 
 void LofiPlugin::prepare(double sr) { dsp.prepare(sr); }
@@ -195,15 +201,18 @@ DrivePlugin::DrivePlugin(tracktion::PluginCreationInfo info)
     : AudioFxPlugin(info) {
     addNumber("drive", "Drive", {0.0f, 36.0f, 1.0f}, 1.0f, 12.0f, fxDb);
     addNumber("tone", "Tone", knobRange(), 0.05f, 0.6f, fxPercent);
-    addChoice("type", "Type", fx::Drive::getTypeNames(), 0.0f);
+    addChoice("driveType", "Type", fx::Drive::getTypeNames(), 0.0f);
     addNumber("mix", "Mix", knobRange(), 0.05f, 1.0f, fxPercent);
     addNumber("output", "Output", {-18.0f, 6.0f, 1.0f}, 1.0f, 0.0f, fxDb);
 }
 
 DrivePlugin::~DrivePlugin() {
-    notifyListenersOfDeletion();
+    // detach first: telling listeners about the deletion empties the
+    // parameter list, and parameters still attached would later touch
+    // values that are already gone
     for (auto p : getAutomatableParameters())
         p->detachFromCurrentValue();
+    notifyListenersOfDeletion();
 }
 
 void DrivePlugin::prepare(double sr) { dsp.prepare(sr); }
@@ -213,7 +222,7 @@ void DrivePlugin::process(juce::AudioBuffer<float> &b, int start, int n,
     fx::Drive::Settings s;
     s.driveDb = get("drive");
     s.tone = get("tone");
-    s.type = getChoice("type");
+    s.type = getChoice("driveType");
     s.mix = get("mix");
     s.outputDb = get("output");
     dsp.process(fxChannel(b, 0, start), fxChannel(b, 1, start), n, s);
@@ -247,15 +256,18 @@ ResonantFilterPlugin::ResonantFilterPlugin(tracktion::PluginCreationInfo info)
         return (p > 0 ? "+" : "") + juce::String(p) + "%";
     });
     addNumber("lfo", "LFO", knobRange(), 0.05f, 0.0f, fxPercent);
-    addChoice("type", "Type", fx::ResonantFilter::getTypeNames(), 0.0f);
+    addChoice("filterType", "Type", fx::ResonantFilter::getTypeNames(), 0.0f);
     addNumber("envSpeed", "Env Release", {0.02f, 1.0f}, 0.02f, 0.15f, fxMs);
     addChoice("lfoRate", "LFO Rate", getLfoRateNames(), 2.0f);
 }
 
 ResonantFilterPlugin::~ResonantFilterPlugin() {
-    notifyListenersOfDeletion();
+    // detach first: telling listeners about the deletion empties the
+    // parameter list, and parameters still attached would later touch
+    // values that are already gone
     for (auto p : getAutomatableParameters())
         p->detachFromCurrentValue();
+    notifyListenersOfDeletion();
 }
 
 void ResonantFilterPlugin::prepare(double sr) { dsp.prepare(sr); }
@@ -267,7 +279,7 @@ void ResonantFilterPlugin::process(juce::AudioBuffer<float> &b, int start,
     s.resonance = get("resonance");
     s.envelope = get("envelope");
     s.lfo = get("lfo");
-    s.type = getChoice("type");
+    s.type = getChoice("filterType");
     s.envRelease = get("envSpeed");
     s.lfoBeats = getLfoRateBeats(getChoice("lfoRate"));
     dsp.process(fxChannel(b, 0, start), fxChannel(b, 1, start), n, time, s);
@@ -287,9 +299,12 @@ DuckerPlugin::DuckerPlugin(tracktion::PluginCreationInfo info)
 }
 
 DuckerPlugin::~DuckerPlugin() {
-    notifyListenersOfDeletion();
+    // detach first: telling listeners about the deletion empties the
+    // parameter list, and parameters still attached would later touch
+    // values that are already gone
     for (auto p : getAutomatableParameters())
         p->detachFromCurrentValue();
+    notifyListenersOfDeletion();
 }
 
 void DuckerPlugin::getChannelNames(juce::StringArray *ins,
@@ -365,9 +380,12 @@ BeatRepeatPlugin::BeatRepeatPlugin(tracktion::PluginCreationInfo info)
 }
 
 BeatRepeatPlugin::~BeatRepeatPlugin() {
-    notifyListenersOfDeletion();
+    // detach first: telling listeners about the deletion empties the
+    // parameter list, and parameters still attached would later touch
+    // values that are already gone
     for (auto p : getAutomatableParameters())
         p->detachFromCurrentValue();
+    notifyListenersOfDeletion();
 }
 
 void BeatRepeatPlugin::setActive(bool shouldRepeat) {

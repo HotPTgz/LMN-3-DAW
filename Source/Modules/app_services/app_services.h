@@ -42,3 +42,6 @@ namespace app_services {
 
 // PowerControl
 #include "PowerControl/PowerControl.h"
+
+// ProjectRepair
+#include "ProjectRepair/ProjectRepair.h"

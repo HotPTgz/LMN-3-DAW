@@ -231,9 +231,12 @@ StringEnginePlugin::StringEnginePlugin(tracktion::PluginCreationInfo info)
 }
 
 StringEnginePlugin::~StringEnginePlugin() {
-    notifyListenersOfDeletion();
+    // detach first: telling listeners about the deletion empties the
+    // parameter list, and parameters still attached would later touch
+    // values that are already gone
     for (auto p : getAutomatableParameters())
         p->detachFromCurrentValue();
+    notifyListenersOfDeletion();
 }
 
 //==============================================================================
@@ -259,9 +262,12 @@ FmEnginePlugin::FmEnginePlugin(tracktion::PluginCreationInfo info)
 }
 
 FmEnginePlugin::~FmEnginePlugin() {
-    notifyListenersOfDeletion();
+    // detach first: telling listeners about the deletion empties the
+    // parameter list, and parameters still attached would later touch
+    // values that are already gone
     for (auto p : getAutomatableParameters())
         p->detachFromCurrentValue();
+    notifyListenersOfDeletion();
 }
 
 //==============================================================================
@@ -284,9 +290,12 @@ PulseEnginePlugin::PulseEnginePlugin(tracktion::PluginCreationInfo info)
 }
 
 PulseEnginePlugin::~PulseEnginePlugin() {
-    notifyListenersOfDeletion();
+    // detach first: telling listeners about the deletion empties the
+    // parameter list, and parameters still attached would later touch
+    // values that are already gone
     for (auto p : getAutomatableParameters())
         p->detachFromCurrentValue();
+    notifyListenersOfDeletion();
 }
 
 } // namespace internal_plugins

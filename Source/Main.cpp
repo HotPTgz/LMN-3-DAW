@@ -208,7 +208,7 @@ class GuiAppApplication : public juce::JUCEApplication {
     // the current edit.
     void loadEdit(const juce::File &editFile) {
         if (editFile.existsAsFile()) {
-            edit = tracktion::loadEditFromFile(engine, editFile);
+            edit = app_services::loadProject(engine, editFile);
         } else {
             editFile.create();
             edit = tracktion::createEmptyEdit(engine, editFile);
