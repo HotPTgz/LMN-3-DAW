@@ -207,9 +207,16 @@ class GuiAppApplication : public juce::JUCEApplication {
     // Loads (or creates, if it doesn't exist yet) the project and makes it
     // the current edit.
     void loadEdit(const juce::File &editFile) {
-        if (editFile.existsAsFile()) {
-            edit = app_services::loadProject(engine, editFile);
-        } else {
+        bool startedEmpty = false;
+        if (editFile.existsAsFile())
+            edit = app_services::loadProject(engine, editFile, &startedEmpty);
+        if (edit != nullptr && startedEmpty) {
+            // the file couldn't be read (see loadProject): give the empty
+            // song its tracks, like a new project
+            edit->ensureNumberOfAudioTracks(8);
+            for (auto track : tracktion::getAudioTracks(*edit))
+                track->setColour(appLookAndFeel.getRandomColour());
+        } else if (!editFile.existsAsFile()) {
             editFile.create();
             edit = tracktion::createEmptyEdit(engine, editFile);
             edit->ensureNumberOfAudioTracks(8);
